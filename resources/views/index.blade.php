@@ -32,6 +32,9 @@
             --danger: #ef4444;
             --danger-light: #fee2e2;
             --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --neutral: #6b7280;
+            --neutral-light: #f3f4f6;
             --dark: #1e293b;
             --light: #f8fafc;
             --gray: #64748b;
@@ -353,7 +356,7 @@
         /* Stats Cards */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -361,7 +364,7 @@
         .stat-card {
             background: white;
             border-radius: var(--border-radius);
-            padding: 1.5rem;
+            padding: 1.25rem;
             border: 1px solid var(--gray-light);
             transition: var(--transition);
         }
@@ -372,8 +375,8 @@
         }
         
         .stat-icon {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -392,8 +395,13 @@
             color: var(--danger);
         }
         
+        .neutral .stat-icon {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+        
         .stat-value {
-            font-size: 2rem;
+            font-size: 1.75rem;
             font-weight: 700;
             margin-bottom: 0.25rem;
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -405,6 +413,10 @@
         
         .negative .stat-value {
             color: var(--danger);
+        }
+        
+        .neutral .stat-value {
+            color: var(--warning);
         }
         
         .stat-label {
@@ -488,8 +500,8 @@
         }
         
         .sentiment-badge.neutral {
-            background: var(--gray-light);
-            color: var(--gray);
+            background: var(--warning-light);
+            color: var(--warning);
         }
         
         /* Action Buttons */
@@ -514,6 +526,41 @@
             font-size: 3rem;
             margin-bottom: 1rem;
             color: var(--gray-light);
+        }
+        
+        /* Sentiment Legend */
+        .sentiment-legend {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--gray);
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .legend-color.positive {
+            background: var(--success);
+        }
+        
+        .legend-color.negative {
+            background: var(--danger);
+        }
+        
+        .legend-color.neutral {
+            background: var(--warning);
         }
         
         /* Footer */
@@ -557,7 +604,7 @@
             }
             
             .stats-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(3, 1fr);
             }
             
             .action-buttons {
@@ -572,6 +619,10 @@
             
             .footer-links {
                 justify-content: center;
+            }
+            
+            .sentiment-legend {
+                gap: 1rem;
             }
         }
         
@@ -846,7 +897,7 @@
                             <div class="card-header">
                                 <h3>
                                     <i class="fas fa-chart-bar"></i>
-                                    Hasil Analisis
+                                    Hasil Analisis Sentimen
                                 </h3>
                             </div>
                             <div class="card-body">
@@ -855,10 +906,27 @@
                                     <div class="empty-state" style="padding: 2rem 1rem;">
                                         <i class="fas fa-chart-line"></i>
                                         <h4 class="mt-3 mb-2">Analisis Siap</h4>
-                                        <p class="mb-3">Import data dan klik "Analisis Sekarang" untuk melihat hasil</p>
+                                        <p class="mb-3">Import data dan klik "Analisis Sekarang" untuk melihat hasil analisis sentimen menggunakan Naive Bayes</p>
                                         <div class="accuracy-badge">
                                             <i class="fas fa-bullseye"></i>
                                             Naive Bayes Algorithm
+                                        </div>
+                                        <div class="mt-3">
+                                            <p class="small text-muted mb-2">Klasifikasi Sentimen:</p>
+                                            <div class="sentiment-legend">
+                                                <div class="legend-item">
+                                                    <div class="legend-color positive"></div>
+                                                    <span>Positif</span>
+                                                </div>
+                                                <div class="legend-item">
+                                                    <div class="legend-color negative"></div>
+                                                    <span>Negatif</span>
+                                                </div>
+                                                <div class="legend-item">
+                                                    <div class="legend-color neutral"></div>
+                                                    <span>Netral</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -884,6 +952,15 @@
                                             <div class="stat-label">Review Negatif</div>
                                             <div class="mt-2 small text-muted" id="negativePercent">0%</div>
                                         </div>
+                                        
+                                        <div class="stat-card neutral">
+                                            <div class="stat-icon">
+                                                <i class="fas fa-meh"></i>
+                                            </div>
+                                            <div class="stat-value" id="neutralCount">0</div>
+                                            <div class="stat-label">Review Netral</div>
+                                            <div class="mt-2 small text-muted" id="neutralPercent">0%</div>
+                                        </div>
                                     </div>
                                     
                                     <!-- Chart -->
@@ -891,15 +968,31 @@
                                         <canvas id="sentimentChart"></canvas>
                                     </div>
                                     
+                                    <!-- Legend -->
+                                    <div class="sentiment-legend">
+                                        <div class="legend-item">
+                                            <div class="legend-color positive"></div>
+                                            <span>Positif</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <div class="legend-color negative"></div>
+                                            <span>Negatif</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <div class="legend-color neutral"></div>
+                                            <span>Netral</span>
+                                        </div>
+                                    </div>
+                                    
                                     <!-- Accuracy -->
-                                    <div class="text-center mb-4">
-                                        <p class="mb-2 text-muted">Akurasi Model</p>
+                                    <div class="text-center my-4">
+                                        <p class="mb-2 text-muted">Akurasi Model Naive Bayes</p>
                                         <div class="accuracy-badge">
                                             <i class="fas fa-bullseye"></i>
                                             <span id="accuracyValue">0%</span>
                                         </div>
                                         <p class="mt-2 small text-muted">
-                                            Berdasarkan metode Naive Bayes
+                                            Tingkat akurasi klasifikasi sentimen
                                         </p>
                                     </div>
                                     
@@ -908,7 +1001,7 @@
                                         <div class="row text-center">
                                             <div class="col-4">
                                                 <div class="h5 mb-1" id="totalCount">0</div>
-                                                <div class="small text-muted">Total</div>
+                                                <div class="small text-muted">Total Review</div>
                                             </div>
                                             <div class="col-4">
                                                 <div class="h5 mb-1 text-success" id="confidenceScore">0%</div>
@@ -916,7 +1009,7 @@
                                             </div>
                                             <div class="col-4">
                                                 <div class="h5 mb-1 text-primary" id="processingTime">0s</div>
-                                                <div class="small text-muted">Waktu</div>
+                                                <div class="small text-muted">Waktu Proses</div>
                                             </div>
                                         </div>
                                     </div>
@@ -929,39 +1022,53 @@
                             <div class="card-body">
                                 <h5 class="mb-3">
                                     <i class="fas fa-info-circle text-primary"></i>
-                                    Cara Kerja Sistem
+                                    Klasifikasi Sentimen
                                 </h5>
-                                <div class="d-flex mb-3">
-                                    <div class="me-3">
-                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                            1
-                                        </div>
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="sentiment-badge positive me-2">Positif</div>
+                                        <span class="small text-muted">Review dengan kata-kata positif dan puas</span>
                                     </div>
-                                    <div>
-                                        <h6 class="mb-1">Unggah Data</h6>
-                                        <p class="mb-0 small text-muted">Upload file CSV berisi review aplikasi</p>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="sentiment-badge negative me-2">Negatif</div>
+                                        <span class="small text-muted">Review dengan kritik dan ketidakpuasan</span>
                                     </div>
-                                </div>
-                                <div class="d-flex mb-3">
-                                    <div class="me-3">
-                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                            2
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-1">Import Database</h6>
-                                        <p class="mb-0 small text-muted">Data disimpan untuk diproses lebih lanjut</p>
+                                    <div class="d-flex align-items-center">
+                                        <div class="sentiment-badge neutral me-2">Netral</div>
+                                        <span class="small text-muted">Review dengan informasi faktual tanpa emosi</span>
                                     </div>
                                 </div>
-                                <div class="d-flex">
-                                    <div class="me-3">
-                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                            3
+                                <div class="border-top pt-3">
+                                    <h6 class="mb-2">Cara Kerja Sistem</h6>
+                                    <div class="d-flex mb-2">
+                                        <div class="me-2">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                                1
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="mb-0 small text-muted">Upload file CSV berisi review aplikasi</p>
                                         </div>
                                     </div>
-                                    <div>
-                                        <h6 class="mb-1">Analisis Naive Bayes</h6>
-                                        <p class="mb-0 small text-muted">Algoritma mengklasifikasikan sentimen positif/negatif</p>
+                                    <div class="d-flex mb-2">
+                                        <div class="me-2">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                                2
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="mb-0 small text-muted">Data diproses dengan algoritma Naive Bayes</p>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex">
+                                        <div class="me-2">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                                3
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="mb-0 small text-muted">Hasil klasifikasi sentimen ditampilkan</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1016,8 +1123,10 @@
             const resultsState = document.getElementById('resultsState');
             const positiveCount = document.getElementById('positiveCount');
             const negativeCount = document.getElementById('negativeCount');
+            const neutralCount = document.getElementById('neutralCount');
             const positivePercent = document.getElementById('positivePercent');
             const negativePercent = document.getElementById('negativePercent');
+            const neutralPercent = document.getElementById('neutralPercent');
             const accuracyValue = document.getElementById('accuracyValue');
             const totalCount = document.getElementById('totalCount');
             const confidenceScore = document.getElementById('confidenceScore');
@@ -1179,12 +1288,14 @@
                 analyzeBtn.disabled = true;
                 analyzeBtn.innerHTML = '<div class="spinner"></div> Menganalisis...';
                 
-                // Generate sample results
-                const positive = Math.floor(Math.random() * 150) + 50;
-                const negative = Math.floor(Math.random() * 100) + 20;
-                const total = positive + negative;
+                // Generate sample results with neutral sentiment
+                const positive = Math.floor(Math.random() * 120) + 30;
+                const negative = Math.floor(Math.random() * 80) + 15;
+                const neutral = Math.floor(Math.random() * 60) + 10;
+                const total = positive + negative + neutral;
                 const positivePct = Math.round((positive / total) * 100);
                 const negativePct = Math.round((negative / total) * 100);
+                const neutralPct = Math.round((neutral / total) * 100);
                 const accuracy = Math.floor(Math.random() * 15) + 85;
                 const confidence = Math.floor(Math.random() * 10) + 90;
                 const processTime = (Math.random() * 1.5 + 0.5).toFixed(1);
@@ -1193,8 +1304,10 @@
                     // Update results
                     positiveCount.textContent = positive;
                     negativeCount.textContent = negative;
+                    neutralCount.textContent = neutral;
                     positivePercent.textContent = `${positivePct}% dari total`;
                     negativePercent.textContent = `${negativePct}% dari total`;
+                    neutralPercent.textContent = `${neutralPct}% dari total`;
                     accuracyValue.textContent = `${accuracy}%`;
                     totalCount.textContent = total;
                     confidenceScore.textContent = `${confidence}%`;
@@ -1206,16 +1319,16 @@
                     resultsState.style.display = 'block';
                     
                     // Update chart
-                    updateChart(positive, negative);
+                    updateChart(positive, negative, neutral);
                     
-                    // Update table with sample data
-                    updateTable(total);
+                    // Update table with sample data including neutral
+                    updateTable(total, positive, negative, neutral);
                     
                     // Reset button
                     analyzeBtn.disabled = false;
                     analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Analisis Ulang';
                     
-                    showToast(`Analisis selesai! ${positive} positif, ${negative} negatif`, 'success');
+                    showToast(`Analisis selesai! ${positive} positif, ${negative} negatif, ${neutral} netral`, 'success');
                 }, 1500);
             }
             
@@ -1292,32 +1405,53 @@
                 reader.readAsText(file);
             }
             
-            function updateTable(total) {
+            function updateTable(total, positive, negative, neutral) {
+                // Create sample reviews with all three sentiments
                 const sampleReviews = [
                     { text: "Aplikasi sangat membantu dalam pekerjaan sehari-hari", sentiment: "positive" },
                     { text: "UI/UX yang menarik dan mudah digunakan", sentiment: "positive" },
                     { text: "Sering error ketika membuka file besar", sentiment: "negative" },
                     { text: "Update terbaru membuat aplikasi lebih lambat", sentiment: "negative" },
-                    { text: "Fitur lengkap dan customer service responsif", sentiment: "positive" }
+                    { text: "Aplikasi ini tersedia di Play Store dan App Store", sentiment: "neutral" },
+                    { text: "Fitur lengkap dan customer service responsif", sentiment: "positive" },
+                    { text: "Membutuhkan koneksi internet yang stabil", sentiment: "neutral" },
+                    { text: "Konsumsi baterai terlalu tinggi", sentiment: "negative" },
+                    { text: "Tersedia dalam beberapa bahasa", sentiment: "neutral" },
+                    { text: "Proses login yang cepat dan aman", sentiment: "positive" }
                 ];
                 
+                // Calculate distribution for preview
+                const totalSample = Math.min(8, total);
                 let tableHTML = '';
-                sampleReviews.forEach((review, index) => {
-                    tableHTML += `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${review.text}</td>
-                            <td><span class="sentiment-badge ${review.sentiment}">${review.sentiment === 'positive' ? 'Positif' : 'Negatif'}</span></td>
-                        </tr>
-                    `;
-                });
                 
-                if (total > 5) {
+                // Show proportional representation
+                let positiveShown = 0, negativeShown = 0, neutralShown = 0;
+                const positiveTarget = Math.round((positive / total) * totalSample);
+                const negativeTarget = Math.round((negative / total) * totalSample);
+                const neutralTarget = totalSample - positiveTarget - negativeTarget;
+                
+                for (let i = 0; i < sampleReviews.length && (positiveShown + negativeShown + neutralShown) < totalSample; i++) {
+                    const review = sampleReviews[i];
+                    
+                    // Check if we need more of this sentiment
+                    if (review.sentiment === 'positive' && positiveShown < positiveTarget) {
+                        tableHTML += createTableRow(positiveShown + negativeShown + neutralShown + 1, review.text, review.sentiment);
+                        positiveShown++;
+                    } else if (review.sentiment === 'negative' && negativeShown < negativeTarget) {
+                        tableHTML += createTableRow(positiveShown + negativeShown + neutralShown + 1, review.text, review.sentiment);
+                        negativeShown++;
+                    } else if (review.sentiment === 'neutral' && neutralShown < neutralTarget) {
+                        tableHTML += createTableRow(positiveShown + negativeShown + neutralShown + 1, review.text, review.sentiment);
+                        neutralShown++;
+                    }
+                }
+                
+                if (total > totalSample) {
                     tableHTML += `
                         <tr>
                             <td colspan="3" class="text-center text-muted py-3">
                                 <i class="fas fa-ellipsis-h me-1"></i>
-                                Dan ${total - 5} review lainnya
+                                Dan ${total - totalSample} review lainnya
                             </td>
                         </tr>
                     `;
@@ -1326,7 +1460,20 @@
                 reviewTable.innerHTML = tableHTML;
             }
             
-            function updateChart(positive, negative) {
+            function createTableRow(index, text, sentiment) {
+                const sentimentText = sentiment === 'positive' ? 'Positif' : 
+                                     sentiment === 'negative' ? 'Negatif' : 'Netral';
+                
+                return `
+                    <tr>
+                        <td>${index}</td>
+                        <td>${text}</td>
+                        <td><span class="sentiment-badge ${sentiment}">${sentimentText}</span></td>
+                    </tr>
+                `;
+            }
+            
+            function updateChart(positive, negative, neutral) {
                 const ctx = document.getElementById('sentimentChart').getContext('2d');
                 
                 if (sentimentChart) {
@@ -1336,16 +1483,18 @@
                 sentimentChart = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Positif', 'Negatif'],
+                        labels: ['Positif', 'Negatif', 'Netral'],
                         datasets: [{
-                            data: [positive, negative],
+                            data: [positive, negative, neutral],
                             backgroundColor: [
                                 'rgba(16, 185, 129, 0.8)',
-                                'rgba(239, 68, 68, 0.8)'
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(245, 158, 11, 0.8)'
                             ],
                             borderColor: [
                                 'rgba(16, 185, 129, 1)',
-                                'rgba(239, 68, 68, 1)'
+                                'rgba(239, 68, 68, 1)',
+                                'rgba(245, 158, 11, 1)'
                             ],
                             borderWidth: 1,
                             borderRadius: 6
@@ -1421,21 +1570,23 @@
                 }, 5000);
             }
             
-            // Initialize chart
+            // Initialize chart with three categories
             const ctx = document.getElementById('sentimentChart').getContext('2d');
             sentimentChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Positif', 'Negatif'],
+                    labels: ['Positif', 'Negatif', 'Netral'],
                     datasets: [{
-                        data: [0, 0],
+                        data: [0, 0, 0],
                         backgroundColor: [
                             'rgba(16, 185, 129, 0.1)',
-                            'rgba(239, 68, 68, 0.1)'
+                            'rgba(239, 68, 68, 0.1)',
+                            'rgba(245, 158, 11, 0.1)'
                         ],
                         borderColor: [
                             'rgba(16, 185, 129, 0.3)',
-                            'rgba(239, 68, 68, 0.3)'
+                            'rgba(239, 68, 68, 0.3)',
+                            'rgba(245, 158, 11, 0.3)'
                         ],
                         borderWidth: 1
                     }]
