@@ -1,59 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# NARA — Naive Bayes Sentiment Analysis
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+NARA adalah aplikasi web untuk melakukan analisis sentimen berbasis metode Naive Bayes dari data ulasan (review) dalam format CSV. Aplikasi ini menyediakan antarmuka modern untuk mengunggah data, meninjau isi file, menjalankan analisis, dan menampilkan ringkasan hasil dalam bentuk statistik, tabel, serta visualisasi grafik.
 
-## About Laravel
+## Fitur Utama
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Unggah CSV** dengan drag & drop atau pilih file.
+- **Preview data** sebelum diimpor (mendeteksi kolom `review`).
+- **Simulasi import & analisis** dengan indikator progres.
+- **Ringkasan hasil** (positif, negatif, netral) plus metrik akurasi.
+- **Visualisasi grafik** doughnut dengan Chart.js.
+- **Tabel hasil** yang merangkum contoh review dan label sentimen.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Teknologi
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Laravel 12** (PHP 8.2+)
+- **Vite** untuk asset bundling
+- **Bootstrap 5** + **Font Awesome** (CDN)
+- **Chart.js** untuk grafik
 
-## Learning Laravel
+## Persyaratan
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- PHP **8.2+**
+- Composer
+- Node.js **18+** & npm
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Instalasi
 
-## Laravel Sponsors
+1. **Clone repo**
+   ```bash
+   git clone <repo-url>
+   cd sistem-nara
+   ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+2. **Instal dependency PHP**
+   ```bash
+   composer install
+   ```
 
-### Premium Partners
+3. **Setup file environment**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+4. **Instal dependency frontend & build asset**
+   ```bash
+   npm install
+   npm run build
+   ```
 
-## Contributing
+## Menjalankan Aplikasi (Development)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Gunakan salah satu cara berikut:
 
-## Code of Conduct
+**A. Jalankan server Laravel dan Vite terpisah**
+```bash
+php artisan serve
+npm run dev
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+**B. Jalankan dengan script `composer dev` (server + queue + vite)**
+```bash
+composer dev
+```
 
-## Security Vulnerabilities
+Lalu buka: `http://localhost:8000`
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Format CSV
 
-## License
+Minimal memiliki kolom bernama `review`. Contoh:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```csv
+id,review
+1,"Aplikasinya cepat dan mudah dipakai"
+2,"Sering error saat login"
+3,"Tersedia fitur tambahan yang berguna"
+```
+
+## Struktur Halaman
+
+- **/ (Landing)** — Halaman utama analisis sentimen dengan fitur unggah, ringkasan, grafik, dan tabel data.
+
+## Skrip yang Tersedia
+
+- `composer setup` — instalasi lengkap (composer, env, key, migrate, npm build).
+- `composer dev` — jalankan server + queue listener + vite.
+- `composer test` — jalankan tes Laravel.
+- `npm run dev` — dev server Vite.
+- `npm run build` — build asset.
+
+## Catatan
+
+- UI menggunakan **Bootstrap 5** dan CSS kustom yang tertanam di `resources/views/index.blade.php`.
+- Proses import & analisis pada versi ini adalah simulasi UI (belum terhubung ke proses backend klasifikasi).
+
+---
+
+Jika Anda ingin menghubungkan proses analisis ke backend (misalnya menggunakan model Naive Bayes nyata), Anda dapat menambahkan endpoint baru di `routes/web.php` atau `routes/api.php` dan mengganti simulasi di JavaScript dengan request ke server.
