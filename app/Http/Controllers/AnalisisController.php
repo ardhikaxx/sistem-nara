@@ -35,20 +35,10 @@ class AnalisisController extends Controller
             return response()->json(['message' => 'File tidak dapat dibuka.'], 422);
         }
 
-        $header = fgetcsv($handle);
-        if (!$header) {
+        $index = $this->parseCsvHeader($handle);
+        if ($index instanceof JsonResponse) {
             fclose($handle);
-            return response()->json(['message' => 'File CSV kosong atau tidak valid.'], 422);
-        }
-
-        $normalizedHeader = array_map(static function ($value) {
-            return strtolower(trim($value));
-        }, $header);
-        $index = array_flip($normalizedHeader);
-
-        if (!array_key_exists('review_content', $index)) {
-            fclose($handle);
-            return response()->json(['message' => 'Kolom "review_content" tidak ditemukan.'], 422);
+            return $index;
         }
 
         $analysisDate = Carbon::now()->toDateString();
@@ -63,50 +53,7 @@ class AnalisisController extends Controller
                     'tanggal_analisis' => $analysisDate,
                 ]);
 
-                $batch = [];
-                $previewLimit = 6;
-
-                while (($row = fgetcsv($handle)) !== false) {
-                    $reviewContent = $row[$index['review_content']] ?? null;
-                    if ($reviewContent === null || trim($reviewContent) === '') {
-                        continue;
-                    }
-
-                    $reviewDate = $this->parseDateTime($row, $index, 'review_date');
-                    $replyDate = $this->parseDateTime($row, $index, 'reply_date');
-
-                    $batch[] = [
-                        'analisis_id' => $analysis->id,
-                        'review_id' => $row[$index['review_id']] ?? null,
-                        'user_name' => $row[$index['user_name']] ?? null,
-                        'user_image' => $row[$index['user_image']] ?? null,
-                        'rating' => $this->parseInteger($row, $index, 'rating'),
-                        'review_content' => $reviewContent,
-                        'review_date' => $reviewDate,
-                        'thumbs_up' => $this->parseInteger($row, $index, 'thumbs_up'),
-                        'reply_content' => $row[$index['reply_content']] ?? null,
-                        'reply_date' => $replyDate,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
-
-                    $totalRows++;
-                    if (count($preview) < $previewLimit) {
-                        $preview[] = [
-                            'review_content' => $reviewContent,
-                            'sentiment' => null,
-                        ];
-                    }
-
-                    if (count($batch) >= 500) {
-                        DataUlasan::insert($batch);
-                        $batch = [];
-                    }
-                }
-
-                if ($batch) {
-                    DataUlasan::insert($batch);
-                }
+                $this->importCsvRows($handle, $index, $analysis->id, $preview, $totalRows);
             });
         } catch (\Throwable $e) {
             Log::error('Import analisis gagal', [
@@ -153,83 +100,19 @@ class AnalisisController extends Controller
             ], 422);
         }
 
-        $reviews = DataUlasan::where('analisis_id', $analisis->id)
-            ->select('id', 'review_content')
-            ->get();
-
-        if ($reviews->isEmpty()) {
+        $payload = $this->buildAnalysisPayload($analisis);
+        if ($payload === null) {
             return response()->json(['message' => 'Tidak ada data ulasan untuk dianalisis.'], 422);
         }
 
-        $payload = [
-            'items' => $reviews->map(static function ($review) {
-                return [
-                    'id' => $review->id,
-                    'text' => $review->review_content,
-                ];
-            })->all(),
-        ];
-
-        $scriptPath = base_path('scripts/analysis.py');
-        $process = new Process(['python', $scriptPath]);
-        $process->setInput(json_encode($payload, JSON_UNESCAPED_UNICODE));
-        $process->setTimeout(300);
-        $process->run();
-
-        if (!$process->isSuccessful()) {
-            $errorOutput = trim($process->getErrorOutput());
-            Log::error('Analisis gagal dijalankan', [
-                'analysis_id' => $analisis->id,
-                'analysis_name' => $analisis->nama_analisis,
-                'error_output' => $errorOutput,
-                'output' => $process->getOutput(),
-            ]);
-            return response()->json([
-                'message' => $errorOutput !== '' ? $errorOutput : 'Gagal menjalankan analisis.',
-                'error' => $errorOutput,
-            ], 500);
+        $data = $this->runAnalysisScript($analisis, $payload);
+        if ($data instanceof JsonResponse) {
+            return $data;
         }
 
-        $output = trim($process->getOutput());
-        $data = json_decode($output, true);
+        $this->applyAnalysisResults($data['results']);
 
-        if (!is_array($data) || !isset($data['results'])) {
-            Log::error('Output analisis tidak valid', [
-                'analysis_id' => $analisis->id,
-                'analysis_name' => $analisis->nama_analisis,
-                'output' => $output,
-            ]);
-            return response()->json([
-                'message' => 'Output analisis tidak valid.',
-                'output' => $output,
-            ], 500);
-        }
-
-        $results = collect($data['results'])->keyBy('id');
-        $updates = [];
-
-        foreach ($results as $id => $result) {
-            $updates[] = [
-                'id' => (int) $id,
-                'sentiment' => $result['sentiment'] ?? null,
-                'confidence' => $result['confidence'] ?? null,
-            ];
-        }
-
-        foreach (array_chunk($updates, 500) as $chunk) {
-            DataUlasan::upsert($chunk, ['id'], ['sentiment', 'confidence']);
-        }
-
-        $counts = DataUlasan::where('analisis_id', $analisis->id)
-            ->select('sentiment', DB::raw('count(*) as total'))
-            ->groupBy('sentiment')
-            ->pluck('total', 'sentiment');
-
-        $positive = (int) ($counts['positive'] ?? 0);
-        $negative = (int) ($counts['negative'] ?? 0);
-        $neutral = (int) ($counts['neutral'] ?? 0);
-        $total = $positive + $negative + $neutral;
-
+        [$positive, $negative, $neutral, $total] = $this->getSentimentTotals($analisis->id);
         $analisis->update([
             'total_review_positif' => $positive,
             'total_review_netral' => $neutral,
@@ -324,12 +207,9 @@ class AnalisisController extends Controller
 
     public function exportCsv(Analisis $analisis)
     {
-        if ($analisis->total_review_positif === null
-            || $analisis->total_review_negatif === null
-            || $analisis->total_review_netral === null) {
-            return response()->json([
-                'message' => 'Analisis belum dijalankan. Silakan jalankan analisis terlebih dahulu.',
-            ], 422);
+        $guard = $this->guardAnalyzed($analisis);
+        if ($guard instanceof JsonResponse) {
+            return $guard;
         }
 
         $filename = $analisis->nama_analisis . '_ulasan.csv';
@@ -391,12 +271,9 @@ class AnalisisController extends Controller
             ], 500);
         }
 
-        if ($analisis->total_review_positif === null
-            || $analisis->total_review_negatif === null
-            || $analisis->total_review_netral === null) {
-            return response()->json([
-                'message' => 'Analisis belum dijalankan. Silakan jalankan analisis terlebih dahulu.',
-            ], 422);
+        $guard = $this->guardAnalyzed($analisis);
+        if ($guard instanceof JsonResponse) {
+            return $guard;
         }
 
         $filename = $analisis->nama_analisis . '_ulasan.xlsx';
@@ -487,6 +364,73 @@ class AnalisisController extends Controller
         }
     }
 
+    private function parseCsvHeader($handle): JsonResponse|array
+    {
+        $header = fgetcsv($handle);
+        if (!$header) {
+            return response()->json(['message' => 'File CSV kosong atau tidak valid.'], 422);
+        }
+
+        $normalizedHeader = array_map(static function ($value) {
+            return strtolower(trim($value));
+        }, $header);
+        $index = array_flip($normalizedHeader);
+
+        if (!array_key_exists('review_content', $index)) {
+            return response()->json(['message' => 'Kolom "review_content" tidak ditemukan.'], 422);
+        }
+
+        return $index;
+    }
+
+    private function importCsvRows($handle, array $index, int $analisisId, array &$preview, int &$totalRows): void
+    {
+        $batch = [];
+        $previewLimit = 6;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $reviewContent = $row[$index['review_content']] ?? null;
+            if ($reviewContent === null || trim($reviewContent) === '') {
+                continue;
+            }
+
+            $reviewDate = $this->parseDateTime($row, $index, 'review_date');
+            $replyDate = $this->parseDateTime($row, $index, 'reply_date');
+
+            $batch[] = [
+                'analisis_id' => $analisisId,
+                'review_id' => $row[$index['review_id']] ?? null,
+                'user_name' => $row[$index['user_name']] ?? null,
+                'user_image' => $row[$index['user_image']] ?? null,
+                'rating' => $this->parseInteger($row, $index, 'rating'),
+                'review_content' => $reviewContent,
+                'review_date' => $reviewDate,
+                'thumbs_up' => $this->parseInteger($row, $index, 'thumbs_up'),
+                'reply_content' => $row[$index['reply_content']] ?? null,
+                'reply_date' => $replyDate,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            $totalRows++;
+            if (count($preview) < $previewLimit) {
+                $preview[] = [
+                    'review_content' => $reviewContent,
+                    'sentiment' => null,
+                ];
+            }
+
+            if (count($batch) >= 500) {
+                DataUlasan::insert($batch);
+                $batch = [];
+            }
+        }
+
+        if ($batch) {
+            DataUlasan::insert($batch);
+        }
+    }
+
     private function missingModelFiles(): array
     {
         $base = base_path('scripts/oss-analisis');
@@ -508,5 +452,109 @@ class AnalisisController extends Controller
         }
 
         return $missing;
+    }
+
+    private function guardAnalyzed(Analisis $analisis): ?JsonResponse
+    {
+        if ($analisis->total_review_positif === null
+            || $analisis->total_review_negatif === null
+            || $analisis->total_review_netral === null) {
+            return response()->json([
+                'message' => 'Analisis belum dijalankan. Silakan jalankan analisis terlebih dahulu.',
+            ], 422);
+        }
+
+        return null;
+    }
+
+    private function buildAnalysisPayload(Analisis $analisis): ?array
+    {
+        $reviews = DataUlasan::where('analisis_id', $analisis->id)
+            ->select('id', 'review_content')
+            ->get();
+
+        if ($reviews->isEmpty()) {
+            return null;
+        }
+
+        return [
+            'items' => $reviews->map(static function ($review) {
+                return [
+                    'id' => $review->id,
+                    'text' => $review->review_content,
+                ];
+            })->all(),
+        ];
+    }
+
+    private function runAnalysisScript(Analisis $analisis, array $payload): array|JsonResponse
+    {
+        $scriptPath = base_path('scripts/analysis.py');
+        $process = new Process(['python', $scriptPath]);
+        $process->setInput(json_encode($payload, JSON_UNESCAPED_UNICODE));
+        $process->setTimeout(300);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            $errorOutput = trim($process->getErrorOutput());
+            Log::error('Analisis gagal dijalankan', [
+                'analysis_id' => $analisis->id,
+                'analysis_name' => $analisis->nama_analisis,
+                'error_output' => $errorOutput,
+                'output' => $process->getOutput(),
+            ]);
+            return response()->json([
+                'message' => $errorOutput !== '' ? $errorOutput : 'Gagal menjalankan analisis.',
+                'error' => $errorOutput,
+            ], 500);
+        }
+
+        $output = trim($process->getOutput());
+        $data = json_decode($output, true);
+
+        if (!is_array($data) || !isset($data['results'])) {
+            Log::error('Output analisis tidak valid', [
+                'analysis_id' => $analisis->id,
+                'analysis_name' => $analisis->nama_analisis,
+                'output' => $output,
+            ]);
+            return response()->json([
+                'message' => 'Output analisis tidak valid.',
+                'output' => $output,
+            ], 500);
+        }
+
+        return $data;
+    }
+
+    private function applyAnalysisResults(array $results): void
+    {
+        $updates = [];
+        foreach ($results as $result) {
+            $updates[] = [
+                'id' => (int) ($result['id'] ?? 0),
+                'sentiment' => $result['sentiment'] ?? null,
+                'confidence' => $result['confidence'] ?? null,
+            ];
+        }
+
+        foreach (array_chunk($updates, 500) as $chunk) {
+            DataUlasan::upsert($chunk, ['id'], ['sentiment', 'confidence']);
+        }
+    }
+
+    private function getSentimentTotals(int $analisisId): array
+    {
+        $counts = DataUlasan::where('analisis_id', $analisisId)
+            ->select('sentiment', DB::raw('count(*) as total'))
+            ->groupBy('sentiment')
+            ->pluck('total', 'sentiment');
+
+        $positive = (int) ($counts['positive'] ?? 0);
+        $negative = (int) ($counts['negative'] ?? 0);
+        $neutral = (int) ($counts['neutral'] ?? 0);
+        $total = $positive + $negative + $neutral;
+
+        return [$positive, $negative, $neutral, $total];
     }
 }
