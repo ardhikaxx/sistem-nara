@@ -45,10 +45,10 @@ class AnalisisUlasanExport implements FromQuery, WithHeadings, WithMapping
             $row->user_image,
             $row->rating,
             $row->review_content,
-            $row->review_date?->toDateTimeString(),
+            $row->review_date?->locale('id')->translatedFormat('d F Y'),
             $row->thumbs_up,
             $row->reply_content,
-            $row->reply_date?->toDateTimeString(),
+            $row->reply_date?->locale('id')->translatedFormat('d F Y'),
             $row->sentiment,
             $row->confidence,
         ];

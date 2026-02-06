@@ -27,7 +27,7 @@ class AnalisisController extends Controller
         $perPage = 10;
         $reviews = DataUlasan::query()
             ->where('analisis_id', $analisis->id)
-            ->orderBy('id')
+            ->orderBy('id', 'desc')
             ->paginate($perPage)
             ->withQueryString();
 
@@ -244,6 +244,41 @@ class AnalisisController extends Controller
         return response()->json($history);
     }
 
+    public function historyPage()
+    {
+        $perPage = 10;
+        $status = request()->query('status');
+        $query = Analisis::query();
+        if ($status === 'selesai') {
+            $query->whereNotNull('total_review_positif')
+                ->whereNotNull('total_review_netral')
+                ->whereNotNull('total_review_negatif');
+        } elseif ($status === 'belum') {
+            $query->where(function ($q) {
+                $q->whereNull('total_review_positif')
+                    ->orWhereNull('total_review_netral')
+                    ->orWhereNull('total_review_negatif');
+            });
+        }
+
+        $history = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
+
+        $totalAll = Analisis::count();
+        $totalDone = Analisis::whereNotNull('total_review_positif')
+            ->whereNotNull('total_review_netral')
+            ->whereNotNull('total_review_negatif')
+            ->count();
+        $totalPending = max($totalAll - $totalDone, 0);
+
+        return view('riwayat-analisis', [
+            'history' => $history,
+            'status' => $status,
+            'totalAll' => $totalAll,
+            'totalDone' => $totalDone,
+            'totalPending' => $totalPending,
+        ]);
+    }
+
     public function reviews(Analisis $analisis, Request $request): JsonResponse
     {
         $perPage = 10;
@@ -296,10 +331,10 @@ class AnalisisController extends Controller
                         $row->user_image,
                         $row->rating,
                         $row->review_content,
-                        $row->review_date?->toDateTimeString(),
+                        $row->review_date?->locale('id')->translatedFormat('d F Y'),
                         $row->thumbs_up,
                         $row->reply_content,
-                        $row->reply_date?->toDateTimeString(),
+                        $row->reply_date?->locale('id')->translatedFormat('d F Y'),
                         $row->sentiment,
                         $row->confidence,
                     ]);

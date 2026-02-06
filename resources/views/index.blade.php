@@ -1,25 +1,28 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>NARA | Naive Bayes Sentiment Analysis</title>
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
     <!-- Custom CSS -->
     <style>
         :root {
@@ -46,13 +49,13 @@
             --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             --transition: all 0.2s ease;
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--light);
@@ -60,19 +63,24 @@
             line-height: 1.6;
             overflow-x: hidden;
         }
-        
-        h1, h2, h3, h4, h5, h6 {
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
             font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 600;
         }
-        
+
         /* Layout */
         .app-container {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
-        
+
         /* Header */
         .app-header {
             background: white;
@@ -83,19 +91,19 @@
             z-index: 100;
             box-shadow: var(--shadow-sm);
         }
-        
+
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .brand {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        
+
         .brand-icon {
             width: 42px;
             height: 42px;
@@ -107,7 +115,7 @@
             color: white;
             font-size: 1.25rem;
         }
-        
+
         .brand-text h1 {
             font-size: 1.5rem;
             font-weight: 700;
@@ -115,19 +123,19 @@
             margin-bottom: 2px;
             line-height: 1.2;
         }
-        
+
         .brand-text p {
             font-size: 0.875rem;
             color: var(--gray);
             margin: 0;
         }
-        
+
         .header-actions {
             display: flex;
             align-items: center;
             gap: 16px;
         }
-        
+
         .user-profile {
             display: flex;
             align-items: center;
@@ -140,18 +148,18 @@
             cursor: pointer;
             transition: var(--transition);
         }
-        
+
         .user-profile:hover {
             background: var(--primary);
             color: white;
         }
-        
+
         /* Main Content */
         .main-content {
             flex: 1;
             padding: 2rem 0;
         }
-        
+
         /* Card Design */
         .card {
             background: white;
@@ -162,17 +170,17 @@
             overflow: hidden;
             margin-bottom: 1.5rem;
         }
-        
+
         .card:hover {
             box-shadow: var(--shadow-md);
         }
-        
+
         .card-header {
             background: white;
             border-bottom: 1px solid var(--gray-light);
             padding: 1.25rem 1.5rem;
         }
-        
+
         .card-header h3 {
             font-size: 1.125rem;
             font-weight: 600;
@@ -182,11 +190,11 @@
             gap: 10px;
             margin: 0;
         }
-        
+
         .card-body {
             padding: 1.5rem;
         }
-        
+
         /* File Upload */
         .upload-area {
             border: 2px dashed var(--gray-light);
@@ -198,17 +206,17 @@
             transition: var(--transition);
             position: relative;
         }
-        
+
         .upload-area:hover {
             border-color: var(--primary);
             background: rgba(67, 97, 238, 0.02);
         }
-        
+
         .upload-area.dragover {
             border-color: var(--primary);
             background: rgba(67, 97, 238, 0.05);
         }
-        
+
         .upload-icon {
             width: 64px;
             height: 64px;
@@ -221,20 +229,20 @@
             color: var(--primary);
             font-size: 1.75rem;
         }
-        
+
         .upload-text h4 {
             font-size: 1.125rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
             color: var(--dark);
         }
-        
+
         .upload-text p {
             color: var(--gray);
             margin-bottom: 1.5rem;
             font-size: 0.9375rem;
         }
-        
+
         .file-info {
             display: none;
             padding: 1rem;
@@ -243,23 +251,24 @@
             border: 1px solid var(--gray-light);
             margin-top: 1rem;
         }
-        
+
         .file-info.active {
             display: block;
             animation: slideDown 0.3s ease;
         }
-        
+
         @keyframes slideDown {
             from {
                 opacity: 0;
                 transform: translateY(-10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        
+
         /* Buttons */
         .btn {
             padding: 0.75rem 1.5rem;
@@ -274,43 +283,43 @@
             border: none;
             cursor: pointer;
         }
-        
+
         .btn-primary {
             background: var(--primary);
             color: white;
         }
-        
+
         .btn-primary:hover {
             background: var(--primary-dark);
             color: white;
             transform: translateY(-2px);
             box-shadow: var(--shadow-md);
         }
-        
+
         .btn-success {
             background: var(--success);
             color: white;
         }
-        
+
         .btn-success:hover {
             background: #0da271;
             color: white;
             transform: translateY(-2px);
             box-shadow: var(--shadow-md);
         }
-        
+
         .btn-outline {
             background: transparent;
             border: 1px solid var(--gray-light);
             color: var(--gray);
         }
-        
+
         .btn-outline:hover {
             background: var(--light);
             border-color: var(--gray);
             color: var(--dark);
         }
-        
+
         .btn-icon {
             width: 40px;
             height: 40px;
@@ -320,31 +329,31 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         /* Progress Bar */
         .progress-container {
             display: none;
             margin-top: 1rem;
         }
-        
+
         .progress-container.active {
             display: block;
             animation: slideDown 0.3s ease;
         }
-        
+
         .progress-label {
             display: flex;
             justify-content: space-between;
             margin-bottom: 0.5rem;
         }
-        
+
         .progress-bar {
             height: 8px;
             background: var(--gray-light);
             border-radius: 4px;
             overflow: hidden;
         }
-        
+
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--primary), var(--secondary));
@@ -352,7 +361,7 @@
             transition: width 0.3s ease;
             width: 0%;
         }
-        
+
         /* Stats Cards */
         .stats-grid {
             display: grid;
@@ -360,7 +369,7 @@
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
-        
+
         .stat-card {
             background: white;
             border-radius: var(--border-radius);
@@ -368,12 +377,12 @@
             border: 1px solid var(--gray-light);
             transition: var(--transition);
         }
-        
+
         .stat-card:hover {
             transform: translateY(-4px);
             box-shadow: var(--shadow-md);
         }
-        
+
         .stat-icon {
             width: 44px;
             height: 44px;
@@ -384,47 +393,47 @@
             font-size: 1.25rem;
             margin-bottom: 1rem;
         }
-        
+
         .positive .stat-icon {
             background: var(--success-light);
             color: var(--success);
         }
-        
+
         .negative .stat-icon {
             background: var(--danger-light);
             color: var(--danger);
         }
-        
+
         .neutral .stat-icon {
             background: var(--warning-light);
             color: var(--warning);
         }
-        
+
         .stat-value {
             font-size: 1.75rem;
             font-weight: 700;
             margin-bottom: 0.25rem;
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
-        
+
         .positive .stat-value {
             color: var(--success);
         }
-        
+
         .negative .stat-value {
             color: var(--danger);
         }
-        
+
         .neutral .stat-value {
             color: var(--warning);
         }
-        
+
         .stat-label {
             font-size: 0.875rem;
             color: var(--gray);
             font-weight: 500;
         }
-        
+
         /* Accuracy Badge */
         .accuracy-badge {
             display: inline-flex;
@@ -437,25 +446,25 @@
             font-weight: 600;
             font-size: 0.9375rem;
         }
-        
+
         /* Chart Container */
         .chart-container {
             position: relative;
             height: 300px;
             margin: 1rem 0;
         }
-        
+
         /* Table */
         .data-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
         }
-        
+
         .data-table thead {
             background: var(--light);
         }
-        
+
         .data-table th {
             padding: 1rem 1.25rem;
             text-align: left;
@@ -466,21 +475,21 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
+
         .data-table td {
             padding: 1rem 1.25rem;
             border-bottom: 1px solid var(--gray-light);
             vertical-align: middle;
         }
-        
+
         .data-table tbody tr {
             transition: var(--transition);
         }
-        
+
         .data-table tbody tr:hover {
             background: var(--light);
         }
-        
+
         .sentiment-badge {
             padding: 0.375rem 0.75rem;
             border-radius: 20px;
@@ -488,46 +497,376 @@
             font-weight: 500;
             display: inline-block;
         }
-        
+
         .sentiment-badge.positive {
             background: var(--success-light);
             color: var(--success);
         }
-        
+
         .sentiment-badge.negative {
             background: var(--danger-light);
             color: var(--danger);
         }
-        
+
         .sentiment-badge.neutral {
             background: var(--warning-light);
             color: var(--warning);
         }
-        
+
         /* Action Buttons */
         .action-buttons {
             display: flex;
             gap: 1rem;
             margin-top: 1.5rem;
         }
-        
+
         .action-buttons .btn {
             flex: 1;
         }
-        
+
+        /* History */
+        .history-card {
+            border: 1px solid var(--gray-light);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .history-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-light);
+            background: linear-gradient(135deg, var(--primary-light), #ffffff);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .history-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-title h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .history-subtitle {
+            font-size: 0.875rem;
+            color: var(--gray);
+        }
+
+        .history-meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .history-chip {
+            background: white;
+            border: 1px solid var(--gray-light);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+
+        .history-table th {
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 0.75rem;
+        }
+
+        .history-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .history-pagination {
+            border-top: 1px solid var(--gray-light);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .history-page-pill {
+            background: var(--light);
+            border: 1px solid var(--gray-light);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+
+        /* Review Table */
+        .review-card {
+            border: 1px solid var(--gray-light);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .review-header {
+            background: linear-gradient(135deg, #ffffff, var(--primary-light));
+            border-bottom: 1px solid var(--gray-light);
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .review-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .review-title h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .review-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .review-chip {
+            background: white;
+            border: 1px solid var(--gray-light);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+
+        .review-body {
+            padding: 0;
+        }
+
+        .review-table th {
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 0.75rem;
+        }
+
+        .review-pagination {
+            border-top: 1px solid var(--gray-light);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .review-page-pill {
+            background: var(--light);
+            border: 1px solid var(--gray-light);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+
+        /* Analysis Card */
+        .analysis-card {
+            border: 1px solid var(--gray-light);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .analysis-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--gray-light);
+            background: linear-gradient(135deg, #ffffff, #eef2ff);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .analysis-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .analysis-title h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .analysis-subtitle {
+            font-size: 0.875rem;
+            color: var(--gray);
+            margin-top: 2px;
+        }
+
+        .analysis-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .analysis-chip {
+            background: white;
+            border: 1px solid var(--gray-light);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            color: var(--gray);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .analysis-status {
+            background: #eef2ff;
+            color: #1d4ed8;
+            border: 1px solid #c7d2fe;
+        }
+
+        .analysis-status.success {
+            background: #dcfce7;
+            color: #15803d;
+            border-color: #bbf7d0;
+        }
+
+        .analysis-status.error {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
+        .analysis-status.loading {
+            background: #e0f2fe;
+            color: #0369a1;
+            border-color: #bae6fd;
+        }
+        .analysis-chip-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .analysis-body {
+            padding: 1.25rem 1.5rem;
+        }
+
+        .analysis-callout {
+            background: linear-gradient(180deg, #f8fafc, #ffffff);
+            border: 1px dashed var(--gray-light);
+            border-radius: 14px;
+            padding: 1.5rem 1.25rem;
+            text-align: center;
+        }
+
+        .analysis-stats .stat-card {
+            border: 1px solid var(--gray-light);
+            box-shadow: none;
+        }
+        .analysis-strip {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .analysis-strip .stat-card {
+            padding: 0.9rem;
+        }
+        .analysis-strip .stat-icon {
+            width: 38px;
+            height: 38px;
+            font-size: 1rem;
+        }
+        .analysis-strip .stat-value {
+            font-size: 1.3rem;
+        }
+        .analysis-strip .stat-label {
+            font-size: 0.82rem;
+        }
+        .analysis-strip .stat-card .small {
+            font-size: 0.75rem;
+        }
+
+        .analysis-chart {
+            background: #ffffff;
+            border: 1px solid var(--gray-light);
+            border-radius: 14px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .analysis-divider {
+            border-top: 1px solid var(--gray-light);
+            margin: 1.25rem 0;
+        }
+
+        .analysis-footer-stats .h5 {
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .analysis-body {
+                padding: 1rem;
+            }
+
+            .analysis-chart {
+                padding: 0.75rem;
+            }
+
+            .analysis-stats .stat-card {
+                padding: 0.9rem;
+            }
+
+            .analysis-stats .stat-value {
+                font-size: 1.4rem;
+            }
+
+            .analysis-callout {
+                padding: 1.25rem 1rem;
+            }
+
+            .sentiment-legend {
+                gap: 0.75rem;
+            }
+        }
+
         /* Empty State */
         .empty-state {
             text-align: center;
             padding: 3rem 2rem;
             color: var(--gray);
         }
-        
+
         .empty-state i {
             font-size: 3rem;
             margin-bottom: 1rem;
             color: var(--gray-light);
         }
-        
+
         /* Sentiment Legend */
         .sentiment-legend {
             display: flex;
@@ -536,7 +875,7 @@
             margin-top: 1rem;
             flex-wrap: wrap;
         }
-        
+
         .legend-item {
             display: flex;
             align-items: center;
@@ -544,25 +883,25 @@
             font-size: 0.875rem;
             color: var(--gray);
         }
-        
+
         .legend-color {
             width: 12px;
             height: 12px;
             border-radius: 50%;
         }
-        
+
         .legend-color.positive {
             background: var(--success);
         }
-        
+
         .legend-color.negative {
             background: var(--danger);
         }
-        
+
         .legend-color.neutral {
             background: var(--warning);
         }
-        
+
         /* Footer */
         .app-footer {
             background: var(--dark);
@@ -570,72 +909,77 @@
             padding: 2rem 0;
             margin-top: auto;
         }
-        
+
         .footer-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .footer-links {
             display: flex;
             gap: 2rem;
         }
-        
+
         .footer-links a {
             color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
             transition: var(--transition);
         }
-        
+
         .footer-links a:hover {
             color: white;
         }
-        
+
         /* Responsive */
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
                 gap: 1rem;
             }
-            
+
             .brand-text h1 {
                 font-size: 1.25rem;
             }
-            
+
             .stats-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
-            
+
             .action-buttons {
                 flex-direction: column;
             }
-            
+
             .footer-content {
                 flex-direction: column;
                 gap: 1rem;
                 text-align: center;
             }
-            
+
             .footer-links {
                 justify-content: center;
             }
-            
+
             .sentiment-legend {
                 gap: 1rem;
             }
         }
-        
+
         /* Animations */
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
-        
+
         .fade-in {
             animation: fadeIn 0.5s ease;
         }
-        
+
         /* Loading Spinner */
         .spinner {
             width: 20px;
@@ -645,11 +989,13 @@
             border-top-color: white;
             animation: spin 1s ease-in-out infinite;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
-        
+
         /* Toast Notifications */
         .toast-container {
             position: fixed;
@@ -657,7 +1003,7 @@
             right: 20px;
             z-index: 9999;
         }
-        
+
         .toast {
             background: white;
             border-radius: var(--border-radius);
@@ -668,32 +1014,33 @@
             animation: slideInRight 0.3s ease;
             max-width: 350px;
         }
-        
+
         @keyframes slideInRight {
             from {
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
             }
         }
-        
+
         .toast.success {
             border-left-color: var(--success);
         }
-        
+
         .toast.error {
             border-left-color: var(--danger);
         }
-        
+
         .toast-content {
             display: flex;
             align-items: flex-start;
             gap: 12px;
         }
-        
+
         .toast-icon {
             width: 24px;
             height: 24px;
@@ -703,33 +1050,33 @@
             justify-content: center;
             flex-shrink: 0;
         }
-        
+
         .toast.success .toast-icon {
             background: var(--success-light);
             color: var(--success);
         }
-        
+
         .toast.error .toast-icon {
             background: var(--danger-light);
             color: var(--danger);
         }
-        
+
         .toast.info .toast-icon {
             background: var(--primary-light);
             color: var(--primary);
         }
-        
+
         .toast-message {
             flex: 1;
         }
-        
+
         .toast-message h4 {
             font-size: 0.9375rem;
             font-weight: 600;
             margin-bottom: 4px;
             color: var(--dark);
         }
-        
+
         .toast-message p {
             font-size: 0.875rem;
             color: var(--gray);
@@ -767,7 +1114,7 @@
             border-left-color: var(--dark);
             border-right-color: var(--dark);
         }
-        
+
         .toast-close {
             background: none;
             border: none;
@@ -778,6 +1125,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="app-container">
         <!-- Header -->
@@ -793,25 +1141,17 @@
                             <p>Naive Bayes Analisis Review Aplikasi</p>
                         </div>
                     </div>
-                    
+
                     <div class="header-actions">
-                        <button class="btn btn-outline">
+                        <a class="btn btn-outline" href="{{ url('/riwayat-analisis') }}">
                             <i class="fas fa-history"></i>
                             <span>Riwayat</span>
-                        </button>
-                        <button class="btn btn-outline">
-                            <i class="fas fa-cog"></i>
-                            <span>Pengaturan</span>
-                        </button>
-                        <div class="user-profile">
-                            <i class="fas fa-user"></i>
-                            <span>Administrator</span>
-                        </div>
+                        </a>
                     </div>
                 </div>
             </div>
         </header>
-        
+
         <!-- Main Content -->
         <main class="main-content">
             <div class="container">
@@ -843,12 +1183,13 @@
                                         Format file: CSV dengan kolom "review". Ukuran maksimal: 10MB.
                                     </p>
                                 </div>
-                                
+
                                 <!-- File Info -->
                                 <div class="file-info" id="fileInfo">
                                     <div class="d-flex align-items-center justify-content-between">
                                         <div class="d-flex align-items-center gap-3">
-                                            <div class="upload-icon" style="width: 48px; height: 48px; font-size: 1.25rem;">
+                                            <div class="upload-icon"
+                                                style="width: 48px; height: 48px; font-size: 1.25rem;">
                                                 <i class="fas fa-file-csv"></i>
                                             </div>
                                             <div>
@@ -861,7 +1202,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Progress Bar -->
                                 <div class="progress-container" id="progressContainer">
                                     <div class="progress-label">
@@ -872,7 +1213,7 @@
                                         <div class="progress-fill" id="progressFill"></div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Action Buttons -->
                                 <div class="action-buttons">
                                     <button class="btn btn-primary" id="importBtn" disabled>
@@ -899,20 +1240,26 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Results Table -->
-                        <div class="card fade-in" style="animation-delay: 0.1s;">
-                            <div class="card-header">
-                                <h3>
-                                    <i class="fas fa-table"></i>
-                                    Data Review
-                                    <span class="badge bg-primary ms-2" id="totalReviews">0 review</span>
-                                    <span class="badge bg-secondary ms-2" id="skippedReviewsBadge" style="display: none;">0 dilewati</span>
-                                </h3>
+                        <div class="review-card fade-in" style="animation-delay: 0.1s;">
+                            <div class="review-header">
+                                <div>
+                                    <div class="review-title">
+                                        <i class="fas fa-table text-primary"></i>
+                                        <h3>Data Review</h3>
+                                    </div>
+                                    <div class="history-subtitle">Preview ulasan yang sudah diimpor dan dianalisis</div>
+                                </div>
+                                <div class="review-meta">
+                                    <span class="review-chip" id="totalReviews">0 review</span>
+                                    <span class="review-chip" id="skippedReviewsBadge" style="display: none;">0
+                                        dilewati</span>
+                                </div>
                             </div>
-                            <div class="card-body p-0">
+                            <div class="review-body">
                                 <div class="table-responsive">
-                                    <table class="data-table">
+                                    <table class="data-table review-table">
                                         <thead>
                                             <tr>
                                                 <th style="width: 50px;">#</th>
@@ -932,36 +1279,56 @@
                                             </tr>
                                         </tbody>
                                     </table>
-                                    <div class="d-flex justify-content-between align-items-center mt-3" id="reviewPagination">
-                                        <button class="btn btn-outline btn-sm" id="reviewPrev" disabled>
-                                            <i class="fas fa-chevron-left"></i> Sebelumnya
-                                        </button>
-                                        <div class="small text-muted" id="reviewPageInfo">Halaman 1</div>
-                                        <button class="btn btn-outline btn-sm" id="reviewNext" disabled>
-                                            Berikutnya <i class="fas fa-chevron-right"></i>
-                                        </button>
-                                    </div>
                                 </div>
+                            </div>
+                            <div class="review-pagination" id="reviewPagination">
+                                <button class="btn btn-outline btn-sm" id="reviewPrev" disabled>
+                                    <i class="fas fa-chevron-left"></i> Sebelumnya
+                                </button>
+                                <div class="review-page-pill" id="reviewPageInfo">Halaman 1</div>
+                                <button class="btn btn-outline btn-sm" id="reviewNext" disabled>
+                                    Berikutnya <i class="fas fa-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-lg-4">
                         <!-- Results Card -->
-                        <div class="card fade-in" style="animation-delay: 0.2s;">
-                            <div class="card-header">
-                                <h3>
-                                    <i class="fas fa-chart-bar"></i>
-                                    Hasil Analisis Sentimen
-                                </h3>
+                        <div class="analysis-card fade-in" style="animation-delay: 0.2s;">
+                            <div class="analysis-header">
+                                <div>
+                                    <div class="analysis-title">
+                                        <i class="fas fa-chart-bar text-primary"></i>
+                                        <h3>Hasil Analisis Sentimen</h3>
+                                    </div>
+                                    <div class="analysis-subtitle">Ringkasan hasil klasifikasi sentimen ulasan</div>
+                                </div>
+                                <div class="analysis-chips">
+                                    <span class="analysis-chip"><i class="fas fa-brain text-primary"></i> Naive
+                                        Bayes</span>
+                                    <span class="analysis-chip"><i class="fas fa-gauge-high text-success"></i>
+                                        Akurat</span>
+                                    <span class="analysis-chip analysis-status" id="analysisStatus">
+                                        <i class="fas fa-bolt"></i> Siap
+                                    </span>
+                                    <span class="analysis-chip" id="analysisLast">
+                                        <i class="fas fa-clock"></i> Terakhir: -
+                                    </span>
+                                    <button type="button" class="analysis-chip analysis-chip-toggle" id="chartToggle"
+                                        title="Ganti tampilan grafik">
+                                        <i class="fas fa-chart-pie"></i> Donut
+                                    </button>
+                                </div>
                             </div>
-                            <div class="card-body">
+                            <div class="analysis-body">
                                 <!-- Initial State -->
                                 <div id="initialState">
-                                    <div class="empty-state" style="padding: 2rem 1rem;">
+                                    <div class="analysis-callout">
                                         <i class="fas fa-chart-line"></i>
                                         <h4 class="mt-3 mb-2">Analisis Siap</h4>
-                                        <p class="mb-3">Import data dan klik "Analisis Sekarang" untuk melihat hasil analisis sentimen menggunakan Naive Bayes</p>
+                                        <p class="mb-3">Import data dan klik "Analisis Sekarang" untuk melihat hasil
+                                            analisis sentimen menggunakan Naive Bayes</p>
                                         <div class="accuracy-badge">
                                             <i class="fas fa-bullseye"></i>
                                             Naive Bayes Algorithm
@@ -985,11 +1352,11 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Results State -->
                                 <div id="resultsState" style="display: none;">
                                     <!-- Stats Grid -->
-                                    <div class="stats-grid">
+                                    <div class="analysis-strip analysis-stats">
                                         <div class="stat-card positive">
                                             <div class="stat-icon">
                                                 <i class="fas fa-smile"></i>
@@ -998,7 +1365,7 @@
                                             <div class="stat-label">Review Positif</div>
                                             <div class="mt-2 small text-muted" id="positivePercent">0%</div>
                                         </div>
-                                        
+
                                         <div class="stat-card negative">
                                             <div class="stat-icon">
                                                 <i class="fas fa-frown"></i>
@@ -1007,7 +1374,7 @@
                                             <div class="stat-label">Review Negatif</div>
                                             <div class="mt-2 small text-muted" id="negativePercent">0%</div>
                                         </div>
-                                        
+
                                         <div class="stat-card neutral">
                                             <div class="stat-icon">
                                                 <i class="fas fa-meh"></i>
@@ -1017,12 +1384,14 @@
                                             <div class="mt-2 small text-muted" id="neutralPercent">0%</div>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Chart -->
-                                    <div class="chart-container">
-                                        <canvas id="sentimentChart"></canvas>
+                                    <div class="analysis-chart">
+                                        <div class="chart-container">
+                                            <canvas id="sentimentChart"></canvas>
+                                        </div>
                                     </div>
-                                    
+
                                     <!-- Legend -->
                                     <div class="sentiment-legend">
                                         <div class="legend-item">
@@ -1038,7 +1407,7 @@
                                             <span>Netral</span>
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Accuracy -->
                                     <div class="text-center my-4">
                                         <p class="mb-2 text-muted">Akurasi Model Naive Bayes</p>
@@ -1050,9 +1419,10 @@
                                             Tingkat akurasi klasifikasi sentimen
                                         </p>
                                     </div>
-                                    
+
                                     <!-- Summary -->
-                                    <div class="border-top pt-3">
+                                    <div class="analysis-divider"></div>
+                                    <div class="analysis-footer-stats">
                                         <div class="row text-center">
                                             <div class="col-4">
                                                 <div class="h5 mb-1" id="totalCount">0</div>
@@ -1071,33 +1441,46 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Info Card -->
-                        <div class="card fade-in" style="animation-delay: 0.3s;">
-                            <div class="card-body">
-                                <h5 class="mb-3">
-                                    <i class="fas fa-info-circle text-primary"></i>
-                                    Klasifikasi Sentimen
-                                </h5>
-                                <div class="mb-3">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <div class="sentiment-badge positive me-2">Positif</div>
-                                        <span class="small text-muted">Review dengan kata-kata positif dan puas</span>
-                                    </div>
-                                    <div class="d-flex align-items-center mb-2">
-                                        <div class="sentiment-badge negative me-2">Negatif</div>
-                                        <span class="small text-muted">Review dengan kritik dan ketidakpuasan</span>
-                                    </div>
-                                    <div class="d-flex align-items-center">
-                                        <div class="sentiment-badge neutral me-2">Netral</div>
-                                        <span class="small text-muted">Review dengan informasi faktual tanpa emosi</span>
+                    </div>
+                </div>
+                <!-- Sentiment Classification Info -->
+                <section class="mt-3">
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="card fade-in" style="animation-delay: 0.3s;">
+                                <div class="card-body">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-info-circle text-primary"></i>
+                                        Klasifikasi Sentimen
+                                    </h5>
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="sentiment-badge positive me-2">Positif</div>
+                                            <span class="small text-muted">Review dengan kata-kata positif dan puas</span>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="sentiment-badge negative me-2">Negatif</div>
+                                            <span class="small text-muted">Review dengan kritik dan ketidakpuasan</span>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <div class="sentiment-badge neutral me-2">Netral</div>
+                                            <span class="small text-muted">Review dengan informasi faktual tanpa emosi</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="border-top pt-3">
-                                    <h6 class="mb-2">Cara Kerja Sistem</h6>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card fade-in" style="animation-delay: 0.35s;">
+                                <div class="card-body">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-sitemap text-primary"></i>
+                                        Cara Kerja Sistem
+                                    </h5>
                                     <div class="d-flex mb-2">
                                         <div class="me-2">
-                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                                style="width: 24px; height: 24px; font-size: 0.75rem;">
                                                 1
                                             </div>
                                         </div>
@@ -1107,7 +1490,8 @@
                                     </div>
                                     <div class="d-flex mb-2">
                                         <div class="me-2">
-                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                                style="width: 24px; height: 24px; font-size: 0.75rem;">
                                                 2
                                             </div>
                                         </div>
@@ -1117,7 +1501,8 @@
                                     </div>
                                     <div class="d-flex">
                                         <div class="me-2">
-                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.75rem;">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                                style="width: 24px; height: 24px; font-size: 0.75rem;">
                                                 3
                                             </div>
                                         </div>
@@ -1128,75 +1513,73 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- History Card -->
-                        <div class="card fade-in" style="animation-delay: 0.4s;">
-                            <div class="card-header">
-                                <h3><i class="fas fa-history text-primary"></i> Riwayat Analisis</h3>
+                    </div>
+                </section>
+
+                <!-- History Section -->
+                <section class="mt-4">
+                    <div class="history-card fade-in" style="animation-delay: 0.4s;">
+                        <div class="history-header">
+                            <div>
+                                <div class="history-title">
+                                    <i class="fas fa-history text-primary"></i>
+                                    <h3>Riwayat Analisis</h3>
+                                </div>
+                                <div class="history-subtitle">Daftar semua analisis yang pernah dijalankan</div>
                             </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Nama</th>
-                                                <th>Tanggal</th>
-                                                <th>Total</th>
-                                                <th>Aksi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="historyTable">
-                                            <tr>
-                                                <td colspan="4">
-                                                    <div class="empty-state">
-                                                        <i class="fas fa-history"></i>
-                                                        <h4 class="mt-3 mb-2">Belum ada riwayat</h4>
-                                                        <p class="mb-0">Import data untuk memulai analisis</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mt-3" id="historyPagination">
-                                    <button class="btn btn-outline btn-sm" id="historyPrev" disabled>
-                                        <i class="fas fa-chevron-left"></i> Sebelumnya
-                                    </button>
-                                    <div class="small text-muted" id="historyPageInfo">Halaman 1</div>
-                                    <button class="btn btn-outline btn-sm" id="historyNext" disabled>
-                                        Berikutnya <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
+                            <div class="history-meta">
+                                <span class="history-chip">Pagination: 10 data</span>
+                                <span class="history-chip">Urutan terbaru</span>
                             </div>
                         </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="data-table history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama Analisis</th>
+                                            <th>Tanggal</th>
+                                            <th>Total</th>
+                                            <th>Status</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyTable">
+                                        <tr>
+                                            <td colspan="5">
+                                                <div class="empty-state">
+                                                    <i class="fas fa-history"></i>
+                                                    <h4 class="mt-3 mb-2">Belum ada riwayat</h4>
+                                                    <p class="mb-0">Import data untuk memulai analisis</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="history-pagination" id="historyPagination">
+                            <button class="btn btn-outline btn-sm" id="historyPrev" disabled>
+                                <i class="fas fa-chevron-left"></i> Sebelumnya
+                            </button>
+                            <div class="history-page-pill" id="historyPageInfo">Halaman 1</div>
+                            <button class="btn btn-outline btn-sm" id="historyNext" disabled>
+                                Berikutnya <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </section>
             </div>
         </main>
-        
-        <!-- Footer -->
-        <footer class="app-footer">
-            <div class="container">
-                <div class="footer-content">
-                    <div>
-                        <p class="mb-0">&copy; 2023 Sistem NARA. All rights reserved.</p>
-                    </div>
-                    <div class="footer-links">
-                        <a href="#"><i class="fas fa-question-circle me-1"></i> Bantuan</a>
-                        <a href="#"><i class="fas fa-file-alt me-1"></i> Dokumentasi</a>
-                        <a href="#"><i class="fas fa-envelope me-1"></i> Kontak</a>
-                    </div>
-                </div>
-            </div>
-        </footer>
+
     </div>
-    
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Custom JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1238,10 +1621,13 @@
             const processingTime = document.getElementById('processingTime');
             const toastContainer = document.getElementById('toastContainer');
             const historyTable = document.getElementById('historyTable');
+            const analysisStatus = document.getElementById('analysisStatus');
+            const analysisLast = document.getElementById('analysisLast');
+            const chartToggle = document.getElementById('chartToggle');
             const historyPrev = document.getElementById('historyPrev');
             const historyNext = document.getElementById('historyNext');
             const historyPageInfo = document.getElementById('historyPageInfo');
-            
+
             let currentFile = null;
             let sentimentChart = null;
             let currentAnalysisId = null;
@@ -1251,7 +1637,8 @@
             let historyLastPage = 1;
             let analyzeTimer = null;
             let analyzeStart = null;
-            
+            let chartType = 'doughnut';
+
             // Event Listeners
             browseBtn.addEventListener('click', () => fileInput.click());
             uploadArea.addEventListener('click', () => fileInput.click());
@@ -1281,6 +1668,61 @@
                 }
             });
 
+            function setAnalysisStatus(text, state = 'ready') {
+                if (!analysisStatus) return;
+                analysisStatus.classList.remove('success', 'error', 'loading');
+                if (state === 'success') analysisStatus.classList.add('success');
+                if (state === 'error') analysisStatus.classList.add('error');
+                if (state === 'loading') analysisStatus.classList.add('loading');
+                analysisStatus.innerHTML = `<i class="fas fa-bolt"></i> ${text}`;
+            }
+
+            function setAnalysisLast(text) {
+                if (!analysisLast) return;
+                analysisLast.innerHTML = `<i class="fas fa-clock"></i> Terakhir: ${text}`;
+            }
+
+            function formatDateShort(value) {
+                if (!value) return '-';
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) return value;
+                return new Intl.DateTimeFormat('id-ID', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                }).format(date);
+            }
+
+            function formatDateLong(value) {
+                if (!value) return '-';
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) return value;
+                return new Intl.DateTimeFormat('id-ID', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                }).format(date);
+            }
+
+            function setChartToggleLabel() {
+                if (!chartToggle) return;
+                const label = chartType === 'doughnut' ? 'Donut' : 'Bar';
+                const icon = chartType === 'doughnut' ? 'fa-chart-pie' : 'fa-chart-column';
+                chartToggle.innerHTML = `<i class="fas ${icon}"></i> ${label}`;
+            }
+
+            if (chartToggle) {
+                chartToggle.addEventListener('click', () => {
+                    chartType = chartType === 'doughnut' ? 'bar' : 'doughnut';
+                    setChartToggleLabel();
+                    updateChart(
+                        Number(positiveCount.textContent || 0),
+                        Number(negativeCount.textContent || 0),
+                        Number(neutralCount.textContent || 0)
+                    );
+                });
+            }
+
             historyTable.addEventListener('click', (event) => {
                 const disabledExport = event.target.closest('[data-action="export-disabled"]');
                 if (disabledExport) {
@@ -1306,39 +1748,39 @@
                     analyzeData();
                 }
             });
-            
+
             // Drag and Drop
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 uploadArea.addEventListener(eventName, preventDefaults, false);
             });
-            
+
             function preventDefaults(e) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-            
+
             ['dragenter', 'dragover'].forEach(eventName => {
                 uploadArea.addEventListener(eventName, highlight, false);
             });
-            
+
             ['dragleave', 'drop'].forEach(eventName => {
                 uploadArea.addEventListener(eventName, unhighlight, false);
             });
-            
+
             function highlight() {
                 uploadArea.classList.add('dragover');
             }
-            
+
             function unhighlight() {
                 uploadArea.classList.remove('dragover');
             }
-            
+
             uploadArea.addEventListener('drop', handleDrop, false);
-            
+
             function handleDrop(e) {
                 const dt = e.dataTransfer;
                 const files = dt.files;
-                
+
                 if (files.length > 0) {
                     const file = files[0];
                     if (file.name.toLowerCase().endsWith('.csv')) {
@@ -1348,42 +1790,42 @@
                     }
                 }
             }
-            
+
             function handleFileSelect(e) {
                 const file = e.target.files[0];
                 if (file) {
                     handleFile(file);
                 }
             }
-            
+
             function handleFile(file) {
                 if (!file.name.toLowerCase().endsWith('.csv')) {
                     showToast('Silakan pilih file CSV yang valid', 'error');
                     return;
                 }
-                
+
                 currentFile = file;
                 currentAnalysisId = null;
                 const fileSize = formatFileSize(file.size);
-                
+
                 // Update file info
                 fileName.textContent = file.name;
                 fileDetails.textContent = `${fileSize} • CSV`;
                 fileInfo.classList.add('active');
-                
+
                 // Enable import button
                 importBtn.disabled = false;
                 importBtn.style.display = 'inline-flex';
                 analyzeBtn.disabled = true;
                 importBtn.innerHTML = '<i class="fas fa-file-import"></i> Import ke Database';
                 analyzeBtn.innerHTML = '<i class="fas fa-play"></i> Analisis Sekarang';
-                
+
                 // Preview file content
                 previewFile(file);
-                
+
                 showToast(`File "${file.name}" berhasil dipilih`, 'success');
             }
-            
+
             function removeFile() {
                 fileInput.value = '';
                 currentFile = null;
@@ -1405,7 +1847,7 @@
                     </tr>
                 `;
                 totalReviews.textContent = '0 review';
-                
+
                 // Reset results
                 initialState.style.display = 'block';
                 resultsState.style.display = 'none';
@@ -1415,10 +1857,11 @@
                 reviewPage = 1;
                 reviewLastPage = 1;
                 updateReviewPagination();
-                
+                setAnalysisStatus('Siap', 'ready');
+
                 showToast('File berhasil dihapus', 'info');
             }
-            
+
             function importFile() {
                 if (!currentFile) return;
                 progressContainer.classList.add('active');
@@ -1432,13 +1875,13 @@
                 formData.append('file', currentFile);
 
                 fetch('/analisis/import', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
-                    },
-                    body: formData
-                })
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: formData
+                    })
                     .then(async (response) => {
                         if (!response.ok) {
                             const errorText = await response.text();
@@ -1484,8 +1927,12 @@
                             importBtn.style.display = 'none';
                             analyzeBtn.disabled = false;
                             fileInfo.classList.add('imported');
-                            const skippedLabel = skippedReviews > 0 ? `, ${skippedReviews} dilewati` : '';
-                            showToast(`${data.message || 'Data berhasil diimport ke database'} (${totalImported} data${skippedLabel})`, 'success');
+                            setAnalysisStatus('Siap', 'ready');
+                            const skippedLabel = skippedReviews > 0 ? `, ${skippedReviews} dilewati` :
+                                '';
+                            showToast(
+                                `${data.message || 'Data berhasil diimport ke database'} (${totalImported} data${skippedLabel})`,
+                                'success');
                         }, 400);
                     })
                     .catch((error) => {
@@ -1497,7 +1944,7 @@
                         showToast(error.message, 'error');
                     });
             }
-            
+
             function analyzeData() {
                 if (!currentAnalysisId) {
                     showToast('Silakan import data terlebih dahulu.', 'error');
@@ -1506,23 +1953,25 @@
 
                 checkModelStatus().then((status) => {
                     if (!status.ok) {
-                        const details = status.missing && status.missing.length
-                            ? `\nFile hilang:\n- ${status.missing.join('\n- ')}`
-                            : '';
+                        const details = status.missing && status.missing.length ?
+                            `\nFile hilang:\n- ${status.missing.join('\n- ')}` :
+                            '';
                         showToast(`Model belum siap. Klik "Perbaiki Model".${details}`, 'error');
+                        setAnalysisStatus('Model Error', 'error');
                         return;
                     }
 
                     analyzeBtn.disabled = true;
                     analyzeBtn.innerHTML = '<div class="spinner"></div> Menganalisis...';
+                    setAnalysisStatus('Menganalisis', 'loading');
                     startAnalyzeProgress();
 
                     fetch(`/analisis/${currentAnalysisId}/analyze-run`, {
-                        method: 'GET',
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    })
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        })
                         .then(async (response) => {
                             if (!response.ok) {
                                 const errorText = await response.text();
@@ -1558,16 +2007,16 @@
                             positivePercent.textContent = `${positivePct}% dari total`;
                             negativePercent.textContent = `${negativePct}% dari total`;
                             neutralPercent.textContent = `${neutralPct}% dari total`;
-                            accuracyValue.textContent = data.model_accuracy
-                                ? `${Math.round(data.model_accuracy * 100)}%`
-                                : '0%';
+                            accuracyValue.textContent = data.model_accuracy ?
+                                `${Math.round(data.model_accuracy * 100)}%` :
+                                '0%';
                             totalCount.textContent = total;
-                            confidenceScore.textContent = data.average_confidence
-                                ? `${Math.round(data.average_confidence * 100)}%`
-                                : '0%';
-                            processingTime.textContent = data.processing_time
-                                ? `${data.processing_time.toFixed(1)}s`
-                                : '0s';
+                            confidenceScore.textContent = data.average_confidence ?
+                                `${Math.round(data.average_confidence * 100)}%` :
+                                '0%';
+                            processingTime.textContent = data.processing_time ?
+                                `${data.processing_time.toFixed(1)}s` :
+                                '0s';
                             totalReviews.textContent = `${total} review`;
 
                             initialState.style.display = 'none';
@@ -1579,13 +2028,18 @@
 
                             analyzeBtn.disabled = false;
                             analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Analisis Ulang';
+                            setAnalysisStatus('Selesai', 'success');
+                            setAnalysisLast(formatDateLong(new Date().toISOString()));
                             stopAnalyzeProgress(true);
 
-                            showToast(`Analisis selesai! ${positive} positif, ${negative} negatif, ${neutral} netral`, 'success');
+                            showToast(
+                                `Analisis selesai! ${positive} positif, ${negative} negatif, ${neutral} netral`,
+                                'success');
                         })
                         .catch((error) => {
                             analyzeBtn.disabled = false;
                             analyzeBtn.innerHTML = '<i class="fas fa-play"></i> Analisis Sekarang';
+                            setAnalysisStatus('Gagal', 'error');
                             stopAnalyzeProgress(false);
                             showToast(error.message, 'error');
                         });
@@ -1594,23 +2048,30 @@
 
             function checkModelStatus() {
                 return fetch('/analisis/model/status', {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                })
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    })
                     .then((response) => response.json())
                     .then((data) => {
                         if (data.ok) {
                             repairModelBtn.style.display = 'none';
-                            return { ok: true };
+                            return {
+                                ok: true
+                            };
                         }
 
                         repairModelBtn.style.display = 'inline-flex';
-                        return { ok: false, missing: data.missing || [] };
+                        return {
+                            ok: false,
+                            missing: data.missing || []
+                        };
                     })
                     .catch(() => {
                         repairModelBtn.style.display = 'inline-flex';
-                        return { ok: false };
+                        return {
+                            ok: false
+                        };
                     });
             }
 
@@ -1620,12 +2081,12 @@
                 repairModelBtn.innerHTML = '<div class="spinner"></div> Memperbaiki...';
 
                 fetch('/analisis/model/repair', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
-                    }
-                })
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
                     .then(async (response) => {
                         if (!response.ok) {
                             const errorData = await response.json().catch(() => ({}));
@@ -1684,10 +2145,10 @@
 
             function loadSummary(analysisId) {
                 fetch(`/analisis/${analysisId}/summary`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                })
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    })
                     .then(async (response) => {
                         if (!response.ok) {
                             const errorData = await response.json().catch(() => ({}));
@@ -1714,30 +2175,33 @@
                         neutralPercent.textContent = `${neutralPct}% dari total`;
                         accuracyValue.textContent = '0%';
                         totalCount.textContent = total;
-                        confidenceScore.textContent = data.average_confidence
-                            ? `${Math.round(data.average_confidence * 100)}%`
-                            : '0%';
+                        confidenceScore.textContent = data.average_confidence ?
+                            `${Math.round(data.average_confidence * 100)}%` :
+                            '0%';
                         processingTime.textContent = '0s';
                         totalReviews.textContent = `${total} review`;
 
                         initialState.style.display = 'none';
                         resultsState.style.display = 'block';
                         updateChart(positive, negative, neutral);
+                        setAnalysisStatus('Selesai', 'success');
+                        setAnalysisLast(formatDateLong(new Date().toISOString()));
 
                         loadReviewsPage(analysisId, 1);
                     })
                     .catch((error) => {
+                        setAnalysisStatus('Gagal', 'error');
                         showToast(error.message, 'error');
                     });
             }
-            
+
             function previewFile(file) {
                 const reader = new FileReader();
-                
+
                 reader.onload = function(e) {
                     const content = e.target.result;
                     const lines = content.split('\n').slice(0, 6);
-                    
+
                     if (lines.length <= 1) {
                         reviewTable.innerHTML = `
                             <tr>
@@ -1752,11 +2216,11 @@
                         `;
                         return;
                     }
-                    
+
                     let tableHTML = '';
                     const headers = lines[0].split(',');
                     const reviewIndex = headers.findIndex(h => h.toLowerCase().includes('review'));
-                    
+
                     if (reviewIndex === -1) {
                         reviewTable.innerHTML = `
                             <tr>
@@ -1771,7 +2235,7 @@
                         `;
                         return;
                     }
-                    
+
                     for (let i = 1; i < Math.min(lines.length, 6); i++) {
                         if (lines[i].trim()) {
                             const columns = lines[i].split(',');
@@ -1787,7 +2251,7 @@
                             }
                         }
                     }
-                    
+
                     reviewTable.innerHTML = tableHTML || `
                         <tr>
                             <td colspan="3">
@@ -1800,13 +2264,13 @@
                         </tr>
                     `;
                 };
-                
+
                 reader.readAsText(file);
             }
-            
+
             function updateTableFromReviews(reviews, emptyLabel = 'Belum dianalisis') {
                 if (!reviews.length) {
-                reviewTable.innerHTML = `
+                    reviewTable.innerHTML = `
                     <tr>
                         <td colspan="3">
                             <div class="empty-state">
@@ -1817,9 +2281,9 @@
                         </td>
                     </tr>
                 `;
-                skippedReviewsBadge.style.display = 'none';
-                return;
-            }
+                    skippedReviewsBadge.style.display = 'none';
+                    return;
+                }
 
                 let tableHTML = '';
                 reviews.forEach((review, idx) => {
@@ -1837,7 +2301,7 @@
                 if (sentiment === 'negative') sentimentText = 'Negatif';
                 if (sentiment === 'neutral') sentimentText = 'Netral';
                 const sentimentClass = sentiment || 'neutral';
-                
+
                 return `
                     <tr>
                         <td>${index}</td>
@@ -1846,14 +2310,72 @@
                     </tr>
                 `;
             }
-            
+
             function updateChart(positive, negative, neutral) {
                 const ctx = document.getElementById('sentimentChart').getContext('2d');
-                
+
                 if (sentimentChart) {
                     sentimentChart.destroy();
                 }
-                
+
+                const commonOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 900,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: { size: 13 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                };
+
+                if (chartType === 'bar') {
+                    sentimentChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Positif', 'Negatif', 'Netral'],
+                            datasets: [{
+                                data: [positive, negative, neutral],
+                                backgroundColor: [
+                                    'rgba(16, 185, 129, 0.8)',
+                                    'rgba(239, 68, 68, 0.8)',
+                                    'rgba(245, 158, 11, 0.8)'
+                                ],
+                                borderWidth: 0,
+                                borderRadius: 8,
+                                barThickness: 28
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            plugins: { ...commonOptions.plugins, legend: { display: false } },
+                            scales: {
+                                x: { grid: { display: false } },
+                                y: { grid: { color: '#eef2f7' }, ticks: { precision: 0 } }
+                            }
+                        }
+                    });
+                    return;
+                }
+
                 sentimentChart = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
@@ -1875,30 +2397,7 @@
                         }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 20,
-                                    font: {
-                                        size: 13
-                                    }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const label = context.label || '';
-                                        const value = context.raw || 0;
-                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = Math.round((value / total) * 100);
-                                        return `${label}: ${value} (${percentage}%)`;
-                                    }
-                                }
-                            }
-                        },
+                        ...commonOptions,
                         cutout: '65%'
                     }
                 });
@@ -1912,10 +2411,10 @@
 
             function loadReviewsPage(analysisId, page = 1) {
                 fetch(`/analisis/${analysisId}/reviews?page=${page}`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                })
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    })
                     .then(async (response) => {
                         if (!response.ok) {
                             const errorData = await response.json().catch(() => ({}));
@@ -1937,10 +2436,10 @@
 
             function loadHistory(page = 1) {
                 fetch(`/analisis/history?page=${page}`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                })
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    })
                     .then(async (response) => {
                         if (!response.ok) {
                             const errorData = await response.json().catch(() => ({}));
@@ -1955,10 +2454,17 @@
                         historyPrev.disabled = historyPage <= 1;
                         historyNext.disabled = historyPage >= historyLastPage;
 
+                        if (data.data && data.data.length) {
+                            const latest = data.data[0];
+                            if (latest && latest.tanggal_analisis) {
+                                setAnalysisLast(formatDateLong(latest.tanggal_analisis));
+                            }
+                        }
+
                         if (!data.data || !data.data.length) {
                             historyTable.innerHTML = `
                                 <tr>
-                                    <td colspan="4">
+                                    <td colspan="5">
                                         <div class="empty-state">
                                             <i class="fas fa-history"></i>
                                             <h4 class="mt-3 mb-2">Belum ada riwayat</h4>
@@ -1972,19 +2478,22 @@
 
                         let tableHTML = '';
                         data.data.forEach((item) => {
-                            const total = (item.total_review_positif || 0)
-                                + (item.total_review_negatif || 0)
-                                + (item.total_review_netral || 0);
-                            const isAnalyzed = item.total_review_positif !== null
-                                && item.total_review_negatif !== null
-                                && item.total_review_netral !== null;
+                            const total = (item.total_review_positif || 0) +
+                                (item.total_review_negatif || 0) +
+                                (item.total_review_netral || 0);
+                            const isAnalyzed = item.total_review_positif !== null &&
+                                item.total_review_negatif !== null &&
+                                item.total_review_netral !== null;
+                            const statusLabel = isAnalyzed ? 'Selesai' : 'Belum Analisis';
+                            const statusClass = isAnalyzed ? 'positive' : 'neutral';
                             tableHTML += `
                                 <tr>
                                     <td>${item.nama_analisis}</td>
-                                    <td>${item.tanggal_analisis}</td>
+                                    <td>${formatDateShort(item.tanggal_analisis)}</td>
                                     <td>${total || '-'}</td>
+                                    <td><span class="sentiment-badge ${statusClass}">${statusLabel}</span></td>
                                     <td>
-                                        <div class="d-flex gap-2 flex-wrap">
+                                        <div class="history-row">
                                             <button class="btn btn-outline btn-sm" data-action="view" data-id="${item.id}">
                                                 <i class="fas fa-eye"></i> Detail
                                             </button>
@@ -2014,7 +2523,7 @@
                         showToast(error.message, 'error');
                     });
             }
-            
+
             function formatFileSize(bytes) {
                 if (bytes === 0) return '0 Bytes';
                 const k = 1024;
@@ -2022,14 +2531,14 @@
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
-            
+
             function showToast(message, type = 'info') {
                 const toast = document.createElement('div');
                 toast.className = `toast ${type}`;
-                
-                const icon = type === 'success' ? 'fa-check-circle' : 
-                            type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
-                
+
+                const icon = type === 'success' ? 'fa-check-circle' :
+                    type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+
                 toast.innerHTML = `
                     <div class="toast-content">
                         <div class="toast-icon">
@@ -2044,9 +2553,9 @@
                         </button>
                     </div>
                 `;
-                
+
                 toastContainer.appendChild(toast);
-                
+
                 // Auto remove after 5 seconds
                 setTimeout(() => {
                     if (toast.parentNode) {
@@ -2057,6 +2566,8 @@
 
             loadHistory();
             checkModelStatus();
+            setAnalysisStatus('Siap', 'ready');
+            setChartToggleLabel();
 
             function initTooltips() {
                 const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -2064,42 +2575,13 @@
                     new bootstrap.Tooltip(tooltipTriggerEl);
                 });
             }
-            
+
             // Initialize chart with three categories
-            const ctx = document.getElementById('sentimentChart').getContext('2d');
-            sentimentChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Positif', 'Negatif', 'Netral'],
-                    datasets: [{
-                        data: [0, 0, 0],
-                        backgroundColor: [
-                            'rgba(16, 185, 129, 0.1)',
-                            'rgba(239, 68, 68, 0.1)',
-                            'rgba(245, 158, 11, 0.1)'
-                        ],
-                        borderColor: [
-                            'rgba(16, 185, 129, 0.3)',
-                            'rgba(239, 68, 68, 0.3)',
-                            'rgba(245, 158, 11, 0.3)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    },
-                    cutout: '65%'
-                }
-            });
+            updateChart(0, 0, 0);
 
             initTooltips();
         });
     </script>
 </body>
+
 </html>
