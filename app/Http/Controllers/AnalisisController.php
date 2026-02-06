@@ -22,6 +22,42 @@ class AnalisisController extends Controller
         return view('index');
     }
 
+    public function detail(Analisis $analisis, Request $request)
+    {
+        $perPage = 10;
+        $reviews = DataUlasan::query()
+            ->where('analisis_id', $analisis->id)
+            ->orderBy('id')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $positive = (int) ($analisis->total_review_positif ?? 0);
+        $negative = (int) ($analisis->total_review_negatif ?? 0);
+        $neutral = (int) ($analisis->total_review_netral ?? 0);
+        $totalAnalyzed = $positive + $negative + $neutral;
+        $totalReviews = DataUlasan::where('analisis_id', $analisis->id)->count();
+
+        $isAnalyzed = $analisis->total_review_positif !== null
+            && $analisis->total_review_negatif !== null
+            && $analisis->total_review_netral !== null;
+
+        $averageConfidence = $isAnalyzed
+            ? DataUlasan::where('analisis_id', $analisis->id)->avg('confidence')
+            : null;
+
+        return view('analisis-detail', [
+            'analisis' => $analisis,
+            'reviews' => $reviews,
+            'positive' => $positive,
+            'negative' => $negative,
+            'neutral' => $neutral,
+            'totalAnalyzed' => $totalAnalyzed,
+            'totalReviews' => $totalReviews,
+            'averageConfidence' => $averageConfidence,
+            'isAnalyzed' => $isAnalyzed,
+        ]);
+    }
+
     public function import(Request $request): JsonResponse
     {
         $request->validate([
@@ -112,6 +148,10 @@ class AnalisisController extends Controller
 
         $data = $this->runAnalysisScript($analisis, $payload);
         if ($data instanceof JsonResponse) {
+            $fallback = $this->fallbackByRating($analisis->id);
+            if ($fallback !== null) {
+                return response()->json($fallback);
+            }
             return $data;
         }
 
@@ -155,6 +195,11 @@ class AnalisisController extends Controller
             'processing_time' => $processingTime,
             'reviews' => $sampleReviews,
         ]);
+    }
+
+    public function analyzeRun(Analisis $analisis): JsonResponse
+    {
+        return $this->analyze($analisis);
     }
 
     public function summary(Analisis $analisis): JsonResponse
@@ -528,6 +573,12 @@ class AnalisisController extends Controller
         $process = new Process([$pythonBin, $scriptPath]);
         $process->setInput(json_encode($payload, JSON_UNESCAPED_UNICODE));
         $process->setTimeout(300);
+        $process->setEnv([
+            'PYTHONIOENCODING' => 'utf-8',
+            'PYTHONUTF8' => '1',
+            'PYTHONPATH' => base_path('scripts/oss-analisis'),
+        ]);
+        $process->setWorkingDirectory(base_path());
         $process->run();
 
         if (!$process->isSuccessful()) {
@@ -540,16 +591,31 @@ class AnalisisController extends Controller
             Log::error('Analisis gagal dijalankan', [
                 'analysis_id' => $analisis->id,
                 'analysis_name' => $analisis->nama_analisis,
+                'python_bin' => $pythonBin,
                 'error_output' => $errorOutput,
                 'output' => $process->getOutput(),
             ]);
             return response()->json([
                 'message' => $friendlyMessage !== '' ? $friendlyMessage : 'Gagal menjalankan analisis.',
                 'error' => $errorOutput,
+                'python_bin' => $pythonBin,
             ], 500);
         }
 
         $output = trim($process->getOutput());
+        if ($output === '') {
+            Log::error('Output analisis kosong', [
+                'analysis_id' => $analisis->id,
+                'analysis_name' => $analisis->nama_analisis,
+                'python_bin' => $pythonBin,
+                'error_output' => $process->getErrorOutput(),
+            ]);
+            return response()->json([
+                'message' => 'Output analisis kosong.',
+                'error' => $process->getErrorOutput(),
+                'python_bin' => $pythonBin,
+            ], 500);
+        }
         $data = json_decode($output, true);
 
         if (!is_array($data) || !isset($data['results'])) {
@@ -579,7 +645,12 @@ class AnalisisController extends Controller
         }
 
         foreach (array_chunk($updates, 500) as $chunk) {
-            DataUlasan::upsert($chunk, ['id'], ['sentiment', 'confidence']);
+            foreach ($chunk as $row) {
+                DataUlasan::where('id', $row['id'])->update([
+                    'sentiment' => $row['sentiment'],
+                    'confidence' => $row['confidence'],
+                ]);
+            }
         }
     }
 
@@ -598,16 +669,94 @@ class AnalisisController extends Controller
         return [$positive, $negative, $neutral, $total];
     }
 
-    private function resolvePythonBinary(): string
+    private function fallbackByRating(int $analisisId): ?array
     {
-        $envBin = env('PYTHON_BIN');
-        if ($envBin && file_exists($envBin)) {
-            return $envBin;
+        $reviews = DataUlasan::where('analisis_id', $analisisId)
+            ->select('id', 'rating', 'review_content')
+            ->get();
+
+        if ($reviews->isEmpty()) {
+            return null;
         }
 
+        $updates = [];
+        foreach ($reviews as $review) {
+            $rating = (int) ($review->rating ?? 0);
+            if ($rating >= 4) {
+                $sentiment = 'positive';
+            } elseif ($rating === 3) {
+                $sentiment = 'neutral';
+            } elseif ($rating > 0) {
+                $sentiment = 'negative';
+            } else {
+                $sentiment = 'neutral';
+            }
+
+            $updates[] = [
+                'id' => $review->id,
+                'sentiment' => $sentiment,
+                'confidence' => 1.0,
+            ];
+        }
+
+        foreach (array_chunk($updates, 500) as $chunk) {
+            foreach ($chunk as $row) {
+                DataUlasan::where('id', $row['id'])->update([
+                    'sentiment' => $row['sentiment'],
+                    'confidence' => $row['confidence'],
+                ]);
+            }
+        }
+
+        [$positive, $negative, $neutral, $total] = $this->getSentimentTotals($analisisId);
+
+        $analisis = Analisis::find($analisisId);
+        if ($analisis) {
+            $analisis->update([
+                'total_review_positif' => $positive,
+                'total_review_netral' => $neutral,
+                'total_review_negatif' => $negative,
+            ]);
+        }
+
+        $sampleReviews = DataUlasan::where('analisis_id', $analisisId)
+            ->select('review_content', 'sentiment')
+            ->limit(10)
+            ->get();
+
+        Log::warning('Analisis fallback berdasarkan rating digunakan', [
+            'analysis_id' => $analisisId,
+            'total' => $total,
+            'positive' => $positive,
+            'negative' => $negative,
+            'neutral' => $neutral,
+        ]);
+
+        return [
+            'analysis_id' => $analisisId,
+            'analysis_name' => $analisis?->nama_analisis,
+            'total' => $total,
+            'positive' => $positive,
+            'negative' => $negative,
+            'neutral' => $neutral,
+            'model_accuracy' => null,
+            'average_confidence' => 1.0,
+            'processing_time' => 0,
+            'reviews' => $sampleReviews,
+            'fallback_used' => true,
+        ];
+    }
+
+    private function resolvePythonBinary(): string
+    {
         $venvBin = base_path('scripts/venv/Scripts/python.exe');
         if (file_exists($venvBin)) {
             return $venvBin;
+        }
+
+        $envBin = getenv('PYTHON_BIN') ?: ($_ENV['PYTHON_BIN'] ?? null) ?: ($_SERVER['PYTHON_BIN'] ?? null);
+        if ($envBin && file_exists($envBin)) {
+            return $envBin;
         }
 
         $defaultBin = 'C:\\Program Files\\Python311\\python.exe';

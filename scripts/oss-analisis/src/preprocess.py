@@ -1,42 +1,23 @@
 import re
 import string
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import PorterStemmer
-import nltk
 import warnings
 warnings.filterwarnings('ignore')
 
-# Download NLTK resources (best-effort)
-NLTK_READY = True
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    try:
-        nltk.download('punkt', quiet=True)
-    except Exception:
-        NLTK_READY = False
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    try:
-        nltk.download('stopwords', quiet=True)
-    except Exception:
-        NLTK_READY = False
+# Minimal Indonesian stopwords (fallback, no external dependency)
+STOPWORDS_ID = {
+    "yang","dan","di","ke","dari","ini","itu","untuk","pada","dengan","sebagai","karena",
+    "atau","juga","saya","kamu","dia","kami","kita","mereka","tidak","iya","ya","akan",
+    "sudah","belum","bisa","dapat","ada","jadi","lebih","kurang","sangat","sekali",
+    "agar","tentang","oleh","dalam","bagi","antara","tanpa","hingga","selama","tersebut"
+}
 
 class TextPreprocessor:
     """Preprocessor untuk teks bahasa Indonesia"""
     
     def __init__(self, config):
         self.config = config
-        if NLTK_READY:
-            try:
-                self.stopwords_id = set(stopwords.words('indonesian'))
-            except Exception:
-                self.stopwords_id = set()
-        else:
-            self.stopwords_id = set()
-        self.stemmer = PorterStemmer()
+        self.stopwords_id = STOPWORDS_ID
+        self.stemmer = None
         
     def clean_text(self, text):
         """Membersihkan teks"""
@@ -72,7 +53,7 @@ class TextPreprocessor:
     
     def apply_stemming(self, tokens):
         """Menerapkan stemming"""
-        if not self.config['stemming']:
+        if not self.config['stemming'] or self.stemmer is None:
             return tokens
         return [self.stemmer.stem(word) for word in tokens]
     
@@ -87,13 +68,7 @@ class TextPreprocessor:
         text = self.clean_text(text)
         
         # Tokenize
-        if NLTK_READY:
-            try:
-                tokens = word_tokenize(text)
-            except Exception:
-                tokens = text.split()
-        else:
-            tokens = text.split()
+        tokens = re.findall(r"[a-zA-Z0-9]+", text)
         
         # Remove stopwords
         tokens = self.remove_stopwords(tokens)

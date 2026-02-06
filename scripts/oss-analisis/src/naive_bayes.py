@@ -1,6 +1,4 @@
-import torch
 import numpy as np
-from collections import defaultdict
 import pickle
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import LabelEncoder
@@ -41,32 +39,28 @@ class NaiveBayesClassifier:
         X_vectorized = self.vectorizer.fit_transform(X).toarray()
         self.vocab_size_ = X_vectorized.shape[1]
         
-        # Convert to PyTorch tensors
-        X_tensor = torch.tensor(X_vectorized, dtype=torch.float32)
-        y_tensor = torch.tensor(y_encoded, dtype=torch.long)
-        
         # Calculate class priors
-        self.class_priors_ = self._calculate_class_priors(y_tensor)
+        self.class_priors_ = self._calculate_class_priors(y_encoded)
         
         # Calculate feature probabilities
-        self.feature_probs_ = self._calculate_feature_probabilities(X_tensor, y_tensor)
+        self.feature_probs_ = self._calculate_feature_probabilities(X_vectorized, y_encoded)
         
         return self
     
     def _calculate_class_priors(self, y):
         """Menghitung prior probability untuk setiap kelas"""
-        class_counts = torch.bincount(y)
+        class_counts = np.bincount(y)
         total_samples = len(y)
         priors = (class_counts + self.alpha) / (total_samples + self.alpha * len(class_counts))
-        return priors.numpy()  # Convert to numpy array
+        return priors.astype(float)
     
     def _calculate_feature_probabilities(self, X, y):
         """Menghitung conditional probabilities P(feature|class)"""
-        n_classes = len(torch.unique(y))
+        n_classes = len(np.unique(y))
         n_features = X.shape[1]
         
         # Initialize probability matrix
-        feature_probs = torch.zeros((n_classes, n_features))
+        feature_probs = np.zeros((n_classes, n_features), dtype=float)
         
         for class_idx in range(n_classes):
             # Get samples for this class
@@ -74,8 +68,8 @@ class NaiveBayesClassifier:
             X_class = X[class_mask]
             
             # Sum of features for this class
-            feature_sum = torch.sum(X_class, dim=0)
-            total_words = torch.sum(feature_sum)
+            feature_sum = np.sum(X_class, axis=0)
+            total_words = np.sum(feature_sum)
             
             # Apply Laplace smoothing
             smoothed_sum = feature_sum + self.alpha
@@ -84,7 +78,7 @@ class NaiveBayesClassifier:
             # Calculate probabilities
             feature_probs[class_idx] = smoothed_sum / smoothed_total
         
-        return feature_probs.numpy()  # Convert to numpy array
+        return feature_probs
     
     def predict_proba(self, X):
         """
@@ -97,36 +91,15 @@ class NaiveBayesClassifier:
         """
         # Vectorize input
         X_vectorized = self.vectorizer.transform(X).toarray()
-        X_tensor = torch.tensor(X_vectorized, dtype=torch.float32)
+        log_feature_probs = np.log(self.feature_probs_ + 1e-12)
+        log_priors = np.log(self.class_priors_ + 1e-12)
+
+        log_probs = X_vectorized @ log_feature_probs.T + log_priors
+        log_probs = log_probs - np.max(log_probs, axis=1, keepdims=True)
+        probs = np.exp(log_probs)
+        probs = probs / np.sum(probs, axis=1, keepdims=True)
         
-        n_samples = X_tensor.shape[0]
-        n_classes = len(self.classes_)
-        
-        # Initialize probability matrix
-        log_probs = torch.zeros((n_samples, n_classes))
-        
-        # Calculate log probabilities for each class
-        for class_idx in range(n_classes):
-            # Log prior
-            log_probs[:, class_idx] = torch.log(torch.tensor(self.class_priors_[class_idx]))
-            
-            # Add log likelihood for each feature
-            for i in range(n_samples):
-                # Only consider features that appear in the document
-                non_zero_indices = torch.nonzero(X_tensor[i] > 0).squeeze()
-                if non_zero_indices.numel() > 0:
-                    if non_zero_indices.dim() == 0:
-                        non_zero_indices = non_zero_indices.unsqueeze(0)
-                    
-                    # Sum of log probabilities for features in document
-                    feature_log_probs = torch.log(torch.tensor(self.feature_probs_[class_idx, non_zero_indices]))
-                    log_probs[i, class_idx] += torch.sum(feature_log_probs * X_tensor[i, non_zero_indices])
-        
-        # Convert log probabilities to probabilities
-        probs = torch.exp(log_probs - torch.max(log_probs, dim=1, keepdim=True)[0])
-        probs = probs / torch.sum(probs, dim=1, keepdim=True)
-        
-        return probs.numpy()
+        return probs
     
     def predict(self, X):
         """

@@ -1298,7 +1298,7 @@
                 if (!analysisId) return;
 
                 if (action === 'view') {
-                    loadSummary(analysisId);
+                    window.location.href = `/analisis/${analysisId}`;
                 }
 
                 if (action === 'analyze') {
@@ -1517,19 +1517,28 @@
                     analyzeBtn.innerHTML = '<div class="spinner"></div> Menganalisis...';
                     startAnalyzeProgress();
 
-                    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-                    fetch(`/analisis/${currentAnalysisId}/analyze`, {
-                        method: 'POST',
+                    fetch(`/analisis/${currentAnalysisId}/analyze-run`, {
+                        method: 'GET',
                         headers: {
-                            'X-CSRF-TOKEN': csrfToken,
                             'Accept': 'application/json'
                         }
                     })
                         .then(async (response) => {
                             if (!response.ok) {
-                                const errorData = await response.json().catch(() => ({}));
-                                throw new Error(errorData.message || 'Gagal melakukan analisis.');
+                                const errorText = await response.text();
+                                let errorMessage = 'Gagal melakukan analisis.';
+                                try {
+                                    const parsed = JSON.parse(errorText);
+                                    errorMessage = parsed.message || errorMessage;
+                                    if (parsed.python_bin) {
+                                        errorMessage += ` (Python: ${parsed.python_bin})`;
+                                    }
+                                } catch (e) {
+                                    if (errorText) {
+                                        errorMessage = errorText;
+                                    }
+                                }
+                                throw new Error(errorMessage);
                             }
                             return response.json();
                         })
@@ -1977,7 +1986,7 @@
                                     <td>
                                         <div class="d-flex gap-2 flex-wrap">
                                             <button class="btn btn-outline btn-sm" data-action="view" data-id="${item.id}">
-                                                <i class="fas fa-eye"></i> Lihat
+                                                <i class="fas fa-eye"></i> Detail
                                             </button>
                                             <button class="btn btn-success btn-sm" data-action="analyze" data-id="${item.id}">
                                                 <i class="fas fa-play"></i> Analisis
