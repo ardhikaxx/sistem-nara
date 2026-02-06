@@ -35,25 +35,28 @@ class AnalisisController extends Controller
             return response()->json(['message' => 'File tidak dapat dibuka.'], 422);
         }
 
-        $index = $this->parseCsvHeader($handle);
-        if ($index instanceof JsonResponse) {
+        $csvMeta = $this->parseCsvHeader($handle);
+        if ($csvMeta instanceof JsonResponse) {
             fclose($handle);
-            return $index;
+            return $csvMeta;
         }
+        $index = $csvMeta['index'];
+        $delimiter = $csvMeta['delimiter'];
 
         $analysisDate = Carbon::now()->toDateString();
         $analysis = null;
         $preview = [];
         $totalRows = 0;
+        $skippedRows = 0;
 
         try {
-            DB::transaction(function () use (&$analysis, $analysisDate, $handle, $index, &$preview, &$totalRows) {
+            DB::transaction(function () use (&$analysis, $analysisDate, $handle, $index, $delimiter, &$preview, &$totalRows, &$skippedRows) {
                 $analysis = Analisis::create([
                     'nama_analisis' => $this->generateAnalysisName(),
                     'tanggal_analisis' => $analysisDate,
                 ]);
 
-                $this->importCsvRows($handle, $index, $analysis->id, $preview, $totalRows);
+                $this->importCsvRows($handle, $index, $delimiter, $analysis->id, $preview, $totalRows, $skippedRows);
             });
         } catch (\Throwable $e) {
             Log::error('Import analisis gagal', [
@@ -80,6 +83,8 @@ class AnalisisController extends Controller
             'analysis_id' => $analysis->id,
             'analysis_name' => $analysis->nama_analisis,
             'total_reviews' => $totalRows,
+            'saved_reviews' => $totalRows,
+            'skipped_reviews' => $skippedRows,
             'preview' => $preview,
             'message' => 'Data berhasil diimport ke database.',
         ]);
@@ -366,9 +371,19 @@ class AnalisisController extends Controller
 
     private function parseCsvHeader($handle): JsonResponse|array
     {
-        $header = fgetcsv($handle);
+        $line = fgets($handle);
+        if ($line === false) {
+            return response()->json(['message' => 'File CSV kosong atau tidak valid.'], 422);
+        }
+
+        $delimiter = (str_contains($line, ';') && !str_contains($line, ',')) ? ';' : ',';
+        $header = str_getcsv($line, $delimiter);
         if (!$header) {
             return response()->json(['message' => 'File CSV kosong atau tidak valid.'], 422);
+        }
+
+        if (isset($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
         }
 
         $normalizedHeader = array_map(static function ($value) {
@@ -380,17 +395,21 @@ class AnalisisController extends Controller
             return response()->json(['message' => 'Kolom "review_content" tidak ditemukan.'], 422);
         }
 
-        return $index;
+        return [
+            'index' => $index,
+            'delimiter' => $delimiter,
+        ];
     }
 
-    private function importCsvRows($handle, array $index, int $analisisId, array &$preview, int &$totalRows): void
+    private function importCsvRows($handle, array $index, string $delimiter, int $analisisId, array &$preview, int &$totalRows, int &$skippedRows): void
     {
         $batch = [];
         $previewLimit = 6;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             $reviewContent = $row[$index['review_content']] ?? null;
             if ($reviewContent === null || trim($reviewContent) === '') {
+                $skippedRows++;
                 continue;
             }
 

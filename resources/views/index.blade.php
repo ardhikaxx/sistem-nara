@@ -898,6 +898,7 @@
                                     <i class="fas fa-table"></i>
                                     Data Review
                                     <span class="badge bg-primary ms-2" id="totalReviews">0 review</span>
+                                    <span class="badge bg-secondary ms-2" id="skippedReviewsBadge" style="display: none;">0 dilewati</span>
                                 </h3>
                             </div>
                             <div class="card-body p-0">
@@ -1209,6 +1210,7 @@
             const reviewNext = document.getElementById('reviewNext');
             const reviewPageInfo = document.getElementById('reviewPageInfo');
             const totalReviews = document.getElementById('totalReviews');
+            const skippedReviewsBadge = document.getElementById('skippedReviewsBadge');
             const initialState = document.getElementById('initialState');
             const resultsState = document.getElementById('resultsState');
             const positiveCount = document.getElementById('positiveCount');
@@ -1417,20 +1419,38 @@
                 fetch('/analisis/import', {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': csrfToken
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
                     },
                     body: formData
                 })
                     .then(async (response) => {
                         if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({}));
-                            throw new Error(errorData.message || 'Gagal mengimpor data.');
+                            const errorText = await response.text();
+                            let errorMessage = 'Gagal mengimpor data.';
+                            try {
+                                const parsed = JSON.parse(errorText);
+                                errorMessage = parsed.message || errorMessage;
+                            } catch (e) {
+                                if (errorText) {
+                                    errorMessage = errorText;
+                                }
+                            }
+                            throw new Error(errorMessage);
                         }
                         return response.json();
                     })
                     .then((data) => {
                         currentAnalysisId = data.analysis_id;
-                        totalReviews.textContent = `${data.total_reviews} review`;
+                        const totalImported = data.saved_reviews ?? data.total_reviews ?? 0;
+                        const skippedReviews = data.skipped_reviews ?? 0;
+                        totalReviews.textContent = `${totalImported} review`;
+                        if (skippedReviews > 0) {
+                            skippedReviewsBadge.textContent = `${skippedReviews} dilewati`;
+                            skippedReviewsBadge.style.display = 'inline-block';
+                        } else {
+                            skippedReviewsBadge.style.display = 'none';
+                        }
                         progressFill.style.width = '100%';
                         progressText.textContent = '100%';
 
@@ -1449,7 +1469,8 @@
                             importBtn.style.display = 'none';
                             analyzeBtn.disabled = false;
                             fileInfo.classList.add('imported');
-                            showToast(data.message || 'Data berhasil diimport ke database', 'success');
+                            const skippedLabel = skippedReviews > 0 ? `, ${skippedReviews} dilewati` : '';
+                            showToast(`${data.message || 'Data berhasil diimport ke database'} (${totalImported} data${skippedLabel})`, 'success');
                         }, 400);
                     })
                     .catch((error) => {
@@ -1724,19 +1745,20 @@
             
             function updateTableFromReviews(reviews, emptyLabel = 'Belum dianalisis') {
                 if (!reviews.length) {
-                    reviewTable.innerHTML = `
-                        <tr>
-                            <td colspan="3">
-                                <div class="empty-state">
-                                    <i class="fas fa-file-import"></i>
-                                    <h4 class="mt-3 mb-2">Belum ada data</h4>
-                                    <p class="mb-0">Unggah file CSV untuk memulai analisis</p>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                    return;
-                }
+                reviewTable.innerHTML = `
+                    <tr>
+                        <td colspan="3">
+                            <div class="empty-state">
+                                <i class="fas fa-file-import"></i>
+                                <h4 class="mt-3 mb-2">Belum ada data</h4>
+                                <p class="mb-0">Unggah file CSV untuk memulai analisis</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                skippedReviewsBadge.style.display = 'none';
+                return;
+            }
 
                 let tableHTML = '';
                 reviews.forEach((review, idx) => {
