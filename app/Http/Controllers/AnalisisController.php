@@ -244,40 +244,6 @@ class AnalisisController extends Controller
         return response()->json($history);
     }
 
-    public function historyPage()
-    {
-        $perPage = 10;
-        $status = request()->query('status');
-        $query = Analisis::query();
-        if ($status === 'selesai') {
-            $query->whereNotNull('total_review_positif')
-                ->whereNotNull('total_review_netral')
-                ->whereNotNull('total_review_negatif');
-        } elseif ($status === 'belum') {
-            $query->where(function ($q) {
-                $q->whereNull('total_review_positif')
-                    ->orWhereNull('total_review_netral')
-                    ->orWhereNull('total_review_negatif');
-            });
-        }
-
-        $history = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
-
-        $totalAll = Analisis::count();
-        $totalDone = Analisis::whereNotNull('total_review_positif')
-            ->whereNotNull('total_review_netral')
-            ->whereNotNull('total_review_negatif')
-            ->count();
-        $totalPending = max($totalAll - $totalDone, 0);
-
-        return view('riwayat-analisis', [
-            'history' => $history,
-            'status' => $status,
-            'totalAll' => $totalAll,
-            'totalDone' => $totalDone,
-            'totalPending' => $totalPending,
-        ]);
-    }
 
     public function reviews(Analisis $analisis, Request $request): JsonResponse
     {

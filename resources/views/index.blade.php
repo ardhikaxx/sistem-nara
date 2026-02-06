@@ -1142,12 +1142,7 @@
                         </div>
                     </div>
 
-                    <div class="header-actions">
-                        <a class="btn btn-outline" href="{{ url('/riwayat-analisis') }}">
-                            <i class="fas fa-history"></i>
-                            <span>Riwayat</span>
-                        </a>
-                    </div>
+                    <div class="header-actions"></div>
                 </div>
             </div>
         </header>

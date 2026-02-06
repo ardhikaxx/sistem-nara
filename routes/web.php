@@ -4,7 +4,6 @@ use App\Http\Controllers\AnalisisController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [AnalisisController::class, 'index']);
-Route::get('/riwayat-analisis', [AnalisisController::class, 'historyPage'])->name('analisis.history.page');
 Route::post('/analisis/import', [AnalisisController::class, 'import'])->name('analisis.import');
 Route::post('/analisis/{analisis}/analyze', [AnalisisController::class, 'analyze'])->name('analisis.analyze');
 Route::get('/analisis/{analisis}/analyze-run', [AnalisisController::class, 'analyzeRun'])->name('analisis.analyze.run');
