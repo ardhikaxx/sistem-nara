@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import warnings
 from contextlib import contextmanager
@@ -40,6 +41,11 @@ def main() -> int:
     if not oss_dir.exists():
         sys.stderr.write("Folder model tidak ditemukan di scripts/oss-analisis.\n")
         return 1
+
+    # Use local NLTK data dir to avoid external downloads
+    nltk_data_dir = oss_dir / "nltk_data"
+    nltk_data_dir.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("NLTK_DATA", str(nltk_data_dir))
 
     required_files = [
         oss_dir / "config.py",

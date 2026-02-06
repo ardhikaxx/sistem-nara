@@ -369,6 +369,21 @@ class AnalisisController extends Controller
         }
     }
 
+    private function getColumnValue(array $row, array $index, string $key): ?string
+    {
+        if (!array_key_exists($key, $index)) {
+            return null;
+        }
+
+        $value = $row[$index[$key]] ?? null;
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+        return $value === '' ? null : $value;
+    }
+
     private function parseCsvHeader($handle): JsonResponse|array
     {
         $line = fgets($handle);
@@ -418,14 +433,14 @@ class AnalisisController extends Controller
 
             $batch[] = [
                 'analisis_id' => $analisisId,
-                'review_id' => $row[$index['review_id']] ?? null,
-                'user_name' => $row[$index['user_name']] ?? null,
-                'user_image' => $row[$index['user_image']] ?? null,
+                'review_id' => $this->getColumnValue($row, $index, 'review_id'),
+                'user_name' => $this->getColumnValue($row, $index, 'user_name'),
+                'user_image' => $this->getColumnValue($row, $index, 'user_image'),
                 'rating' => $this->parseInteger($row, $index, 'rating'),
                 'review_content' => $reviewContent,
                 'review_date' => $reviewDate,
                 'thumbs_up' => $this->parseInteger($row, $index, 'thumbs_up'),
-                'reply_content' => $row[$index['reply_content']] ?? null,
+                'reply_content' => $this->getColumnValue($row, $index, 'reply_content'),
                 'reply_date' => $replyDate,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -509,13 +524,19 @@ class AnalisisController extends Controller
     private function runAnalysisScript(Analisis $analisis, array $payload): array|JsonResponse
     {
         $scriptPath = base_path('scripts/analysis.py');
-        $process = new Process(['python', $scriptPath]);
+        $pythonBin = $this->resolvePythonBinary();
+        $process = new Process([$pythonBin, $scriptPath]);
         $process->setInput(json_encode($payload, JSON_UNESCAPED_UNICODE));
         $process->setTimeout(300);
         $process->run();
 
         if (!$process->isSuccessful()) {
             $errorOutput = trim($process->getErrorOutput());
+            $friendlyMessage = $errorOutput;
+            if (preg_match("/No module named '([^']+)'/", $errorOutput, $matches)) {
+                $module = $matches[1];
+                $friendlyMessage = "Modul python \"{$module}\" belum terpasang. Jalankan: pip install -r scripts/oss-analisis/requirements.txt";
+            }
             Log::error('Analisis gagal dijalankan', [
                 'analysis_id' => $analisis->id,
                 'analysis_name' => $analisis->nama_analisis,
@@ -523,7 +544,7 @@ class AnalisisController extends Controller
                 'output' => $process->getOutput(),
             ]);
             return response()->json([
-                'message' => $errorOutput !== '' ? $errorOutput : 'Gagal menjalankan analisis.',
+                'message' => $friendlyMessage !== '' ? $friendlyMessage : 'Gagal menjalankan analisis.',
                 'error' => $errorOutput,
             ], 500);
         }
@@ -575,5 +596,25 @@ class AnalisisController extends Controller
         $total = $positive + $negative + $neutral;
 
         return [$positive, $negative, $neutral, $total];
+    }
+
+    private function resolvePythonBinary(): string
+    {
+        $envBin = env('PYTHON_BIN');
+        if ($envBin && file_exists($envBin)) {
+            return $envBin;
+        }
+
+        $venvBin = base_path('scripts/venv/Scripts/python.exe');
+        if (file_exists($venvBin)) {
+            return $venvBin;
+        }
+
+        $defaultBin = 'C:\\Program Files\\Python311\\python.exe';
+        if (file_exists($defaultBin)) {
+            return $defaultBin;
+        }
+
+        return 'python';
     }
 }

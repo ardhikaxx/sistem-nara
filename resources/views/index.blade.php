@@ -888,6 +888,15 @@
                                         Perbaiki Model
                                     </button>
                                 </div>
+                                <div class="progress-container mt-3" id="analyzeProgress">
+                                    <div class="progress-label">
+                                        <span id="analyzeProgressText">Menganalisis...</span>
+                                        <span id="analyzeProgressPercent">0%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="analyzeProgressFill"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -1202,6 +1211,10 @@
             const importBtn = document.getElementById('importBtn');
             const analyzeBtn = document.getElementById('analyzeBtn');
             const repairModelBtn = document.getElementById('repairModelBtn');
+            const analyzeProgress = document.getElementById('analyzeProgress');
+            const analyzeProgressFill = document.getElementById('analyzeProgressFill');
+            const analyzeProgressText = document.getElementById('analyzeProgressText');
+            const analyzeProgressPercent = document.getElementById('analyzeProgressPercent');
             const progressContainer = document.getElementById('progressContainer');
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
@@ -1236,6 +1249,8 @@
             let reviewLastPage = 1;
             let historyPage = 1;
             let historyLastPage = 1;
+            let analyzeTimer = null;
+            let analyzeStart = null;
             
             // Event Listeners
             browseBtn.addEventListener('click', () => fileInput.click());
@@ -1500,6 +1515,7 @@
 
                     analyzeBtn.disabled = true;
                     analyzeBtn.innerHTML = '<div class="spinner"></div> Menganalisis...';
+                    startAnalyzeProgress();
 
                     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
@@ -1554,12 +1570,14 @@
 
                             analyzeBtn.disabled = false;
                             analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Analisis Ulang';
+                            stopAnalyzeProgress(true);
 
                             showToast(`Analisis selesai! ${positive} positif, ${negative} negatif, ${neutral} netral`, 'success');
                         })
                         .catch((error) => {
                             analyzeBtn.disabled = false;
                             analyzeBtn.innerHTML = '<i class="fas fa-play"></i> Analisis Sekarang';
+                            stopAnalyzeProgress(false);
                             showToast(error.message, 'error');
                         });
                 });
@@ -1619,6 +1637,40 @@
                         repairModelBtn.innerHTML = '<i class="fas fa-wrench"></i> Perbaiki Model';
                         showToast(error.message, 'error');
                     });
+            }
+
+            function startAnalyzeProgress() {
+                analyzeProgress.classList.add('active');
+                analyzeProgressFill.style.width = '10%';
+                analyzeProgressPercent.textContent = '10%';
+                analyzeStart = Date.now();
+
+                if (analyzeTimer) {
+                    clearInterval(analyzeTimer);
+                }
+
+                analyzeTimer = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - analyzeStart) / 1000);
+                    const percent = Math.min(95, 10 + elapsed * 8);
+                    analyzeProgressFill.style.width = `${percent}%`;
+                    analyzeProgressPercent.textContent = `${percent}%`;
+                    analyzeProgressText.textContent = `Menganalisis... ${elapsed}s`;
+                }, 500);
+            }
+
+            function stopAnalyzeProgress(success) {
+                if (analyzeTimer) {
+                    clearInterval(analyzeTimer);
+                }
+                analyzeProgressFill.style.width = success ? '100%' : '0%';
+                analyzeProgressPercent.textContent = success ? '100%' : '0%';
+                analyzeProgressText.textContent = success ? 'Selesai' : 'Dibatalkan';
+                setTimeout(() => {
+                    analyzeProgress.classList.remove('active');
+                    analyzeProgressFill.style.width = '0%';
+                    analyzeProgressPercent.textContent = '0%';
+                    analyzeProgressText.textContent = 'Menganalisis...';
+                }, 600);
             }
 
             function loadSummary(analysisId) {

@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 from src.naive_bayes import NaiveBayesClassifier
 from src.preprocess import TextPreprocessor
@@ -69,18 +68,20 @@ class SentimentPredictor:
         
         return results
     
-    def analyze_sentiment_distribution(self, texts):
+def analyze_sentiment_distribution(self, texts):
         """Analyze sentiment distribution for multiple texts"""
         results = self.predict_batch(texts)
         
         sentiments = [r['sentiment'] for r in results]
-        sentiment_counts = pd.Series(sentiments).value_counts()
+        sentiment_counts = {}
+        for sentiment in sentiments:
+            sentiment_counts[sentiment] = sentiment_counts.get(sentiment, 0) + 1
         
         analysis = {
             'total_texts': len(texts),
-            'sentiment_counts': sentiment_counts.to_dict(),
+            'sentiment_counts': sentiment_counts,
             'sentiment_percentages': {
-                sentiment: (count / len(texts)) * 100 
+                sentiment: (count / len(texts)) * 100
                 for sentiment, count in sentiment_counts.items()
             },
             'results': results
@@ -129,6 +130,7 @@ def predict_example():
 
 def predict_from_csv(csv_path, text_column='review_content'):
     """Predict sentiments from CSV file"""
+    import pandas as pd
     predictor = SentimentPredictor()
     
     print(f"\nMemuat data dari: {csv_path}")

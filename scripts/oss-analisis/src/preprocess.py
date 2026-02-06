@@ -1,31 +1,41 @@
 import re
 import string
-import pandas as pd
-import numpy as np
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer
 import nltk
-from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
-# Download NLTK resources
+# Download NLTK resources (best-effort)
+NLTK_READY = True
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt')
+    try:
+        nltk.download('punkt', quiet=True)
+    except Exception:
+        NLTK_READY = False
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
-    nltk.download('stopwords')
+    try:
+        nltk.download('stopwords', quiet=True)
+    except Exception:
+        NLTK_READY = False
 
 class TextPreprocessor:
     """Preprocessor untuk teks bahasa Indonesia"""
     
     def __init__(self, config):
         self.config = config
-        self.stopwords_id = set(stopwords.words('indonesian'))
+        if NLTK_READY:
+            try:
+                self.stopwords_id = set(stopwords.words('indonesian'))
+            except Exception:
+                self.stopwords_id = set()
+        else:
+            self.stopwords_id = set()
         self.stemmer = PorterStemmer()
         
     def clean_text(self, text):
@@ -77,7 +87,13 @@ class TextPreprocessor:
         text = self.clean_text(text)
         
         # Tokenize
-        tokens = word_tokenize(text)
+        if NLTK_READY:
+            try:
+                tokens = word_tokenize(text)
+            except Exception:
+                tokens = text.split()
+        else:
+            tokens = text.split()
         
         # Remove stopwords
         tokens = self.remove_stopwords(tokens)
@@ -98,7 +114,11 @@ class TextPreprocessor:
         texts = df[text_column].tolist()
         processed_texts = []
         
-        iter_texts = tqdm(texts, desc="Preprocessing") if show_progress else texts
+        if show_progress:
+            from tqdm import tqdm
+            iter_texts = tqdm(texts, desc="Preprocessing")
+        else:
+            iter_texts = texts
         
         for text in iter_texts:
             processed_texts.append(self.preprocess_text(text))
@@ -121,6 +141,7 @@ def prepare_data_for_analysis(raw_data_path, config):
     """Mempersiapkan data untuk analisis sentimen"""
     
     print("Membaca data...")
+    import pandas as pd
     df = pd.read_csv(raw_data_path)
     
     # Validasi kolom yang diperlukan
