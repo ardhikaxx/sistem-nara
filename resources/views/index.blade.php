@@ -98,10 +98,20 @@
             align-items: center;
         }
 
+        .header-content.centered {
+            justify-content: center;
+        }
+
         .brand {
             display: flex;
             align-items: center;
             gap: 12px;
+        }
+
+        .brand.centered {
+            flex-direction: row;
+            gap: 12px;
+            text-align: left;
         }
 
         .brand-icon {
@@ -811,6 +821,7 @@
             font-size: 0.75rem;
         }
 
+
         .analysis-chart {
             background: #ffffff;
             border: 1px solid var(--gray-light);
@@ -1131,8 +1142,8 @@
         <!-- Header -->
         <header class="app-header">
             <div class="container">
-                <div class="header-content">
-                    <div class="brand">
+                <div class="header-content centered">
+                    <div class="brand centered">
                         <div class="brand-icon">
                             <i class="fas fa-chart-bar"></i>
                         </div>
@@ -1288,7 +1299,7 @@
                         </div>
                     </div>
 
-                    <div class="col-lg-4">
+                    <div class="col-lg-4 mt-4 mt-lg-0">
                         <!-- Results Card -->
                         <div class="analysis-card fade-in" style="animation-delay: 0.2s;">
                             <div class="analysis-header">
@@ -1439,8 +1450,8 @@
                     </div>
                 </div>
                 <!-- Sentiment Classification Info -->
-                <section class="mt-3">
-                    <div class="row g-3">
+                <section class="mt-4">
+                    <div class="row g-2">
                         <div class="col-lg-6">
                             <div class="card fade-in" style="animation-delay: 0.3s;">
                                 <div class="card-body">
@@ -1512,7 +1523,7 @@
                 </section>
 
                 <!-- History Section -->
-                <section class="mt-4">
+                <section class="mt-2">
                     <div class="history-card fade-in" style="animation-delay: 0.4s;">
                         <div class="history-header">
                             <div>
