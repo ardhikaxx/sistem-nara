@@ -735,6 +735,38 @@
             color: var(--gray);
             margin: 0;
         }
+
+        /* Tooltip */
+        .tooltip-inner {
+            background: var(--dark);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .tooltip {
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .tooltip.bs-tooltip-top .tooltip-arrow::before,
+        .tooltip.bs-tooltip-bottom .tooltip-arrow::before,
+        .tooltip.bs-tooltip-start .tooltip-arrow::before,
+        .tooltip.bs-tooltip-end .tooltip-arrow::before {
+            border-top-color: var(--dark);
+            border-bottom-color: var(--dark);
+            border-left-color: var(--dark);
+            border-right-color: var(--dark);
+        }
         
         .toast-close {
             background: none;
@@ -886,6 +918,15 @@
                                             </tr>
                                         </tbody>
                                     </table>
+                                    <div class="d-flex justify-content-between align-items-center mt-3" id="reviewPagination">
+                                        <button class="btn btn-outline btn-sm" id="reviewPrev" disabled>
+                                            <i class="fas fa-chevron-left"></i> Sebelumnya
+                                        </button>
+                                        <div class="small text-muted" id="reviewPageInfo">Halaman 1</div>
+                                        <button class="btn btn-outline btn-sm" id="reviewNext" disabled>
+                                            Berikutnya <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1073,6 +1114,47 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- History Card -->
+                        <div class="card fade-in" style="animation-delay: 0.4s;">
+                            <div class="card-header">
+                                <h3><i class="fas fa-history text-primary"></i> Riwayat Analisis</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Nama</th>
+                                                <th>Tanggal</th>
+                                                <th>Total</th>
+                                                <th>Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="historyTable">
+                                            <tr>
+                                                <td colspan="4">
+                                                    <div class="empty-state">
+                                                        <i class="fas fa-history"></i>
+                                                        <h4 class="mt-3 mb-2">Belum ada riwayat</h4>
+                                                        <p class="mb-0">Import data untuk memulai analisis</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-3" id="historyPagination">
+                                    <button class="btn btn-outline btn-sm" id="historyPrev" disabled>
+                                        <i class="fas fa-chevron-left"></i> Sebelumnya
+                                    </button>
+                                    <div class="small text-muted" id="historyPageInfo">Halaman 1</div>
+                                    <button class="btn btn-outline btn-sm" id="historyNext" disabled>
+                                        Berikutnya <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1118,6 +1200,9 @@
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
             const reviewTable = document.getElementById('reviewTable');
+            const reviewPrev = document.getElementById('reviewPrev');
+            const reviewNext = document.getElementById('reviewNext');
+            const reviewPageInfo = document.getElementById('reviewPageInfo');
             const totalReviews = document.getElementById('totalReviews');
             const initialState = document.getElementById('initialState');
             const resultsState = document.getElementById('resultsState');
@@ -1132,9 +1217,18 @@
             const confidenceScore = document.getElementById('confidenceScore');
             const processingTime = document.getElementById('processingTime');
             const toastContainer = document.getElementById('toastContainer');
+            const historyTable = document.getElementById('historyTable');
+            const historyPrev = document.getElementById('historyPrev');
+            const historyNext = document.getElementById('historyNext');
+            const historyPageInfo = document.getElementById('historyPageInfo');
             
             let currentFile = null;
             let sentimentChart = null;
+            let currentAnalysisId = null;
+            let reviewPage = 1;
+            let reviewLastPage = 1;
+            let historyPage = 1;
+            let historyLastPage = 1;
             
             // Event Listeners
             browseBtn.addEventListener('click', () => fileInput.click());
@@ -1143,6 +1237,52 @@
             removeFileBtn.addEventListener('click', removeFile);
             importBtn.addEventListener('click', importFile);
             analyzeBtn.addEventListener('click', analyzeData);
+            reviewPrev.addEventListener('click', () => {
+                if (currentAnalysisId && reviewPage > 1) {
+                    loadReviewsPage(currentAnalysisId, reviewPage - 1);
+                }
+            });
+            reviewNext.addEventListener('click', () => {
+                if (currentAnalysisId && reviewPage < reviewLastPage) {
+                    loadReviewsPage(currentAnalysisId, reviewPage + 1);
+                }
+            });
+            historyPrev.addEventListener('click', () => {
+                if (historyPage > 1) {
+                    loadHistory(historyPage - 1);
+                }
+            });
+            historyNext.addEventListener('click', () => {
+                if (historyPage < historyLastPage) {
+                    loadHistory(historyPage + 1);
+                }
+            });
+
+            historyTable.addEventListener('click', (event) => {
+                const disabledExport = event.target.closest('[data-action="export-disabled"]');
+                if (disabledExport) {
+                    event.preventDefault();
+                    const message = disabledExport.dataset.message || 'Analisis belum dijalankan.';
+                    showToast(message, 'info');
+                    return;
+                }
+
+                const button = event.target.closest('button[data-action]');
+                if (!button) return;
+
+                const action = button.dataset.action;
+                const analysisId = button.dataset.id;
+                if (!analysisId) return;
+
+                if (action === 'view') {
+                    loadSummary(analysisId);
+                }
+
+                if (action === 'analyze') {
+                    currentAnalysisId = analysisId;
+                    analyzeData();
+                }
+            });
             
             // Drag and Drop
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -1200,6 +1340,7 @@
                 }
                 
                 currentFile = file;
+                currentAnalysisId = null;
                 const fileSize = formatFileSize(file.size);
                 
                 // Update file info
@@ -1209,6 +1350,10 @@
                 
                 // Enable import button
                 importBtn.disabled = false;
+                importBtn.style.display = 'inline-flex';
+                analyzeBtn.disabled = true;
+                importBtn.innerHTML = '<i class="fas fa-file-import"></i> Import ke Database';
+                analyzeBtn.innerHTML = '<i class="fas fa-play"></i> Analisis Sekarang';
                 
                 // Preview file content
                 previewFile(file);
@@ -1219,9 +1364,12 @@
             function removeFile() {
                 fileInput.value = '';
                 currentFile = null;
+                currentAnalysisId = null;
                 fileInfo.classList.remove('active');
+                fileInfo.classList.remove('imported');
                 importBtn.disabled = true;
                 analyzeBtn.disabled = true;
+                importBtn.style.display = 'inline-flex';
                 reviewTable.innerHTML = `
                     <tr>
                         <td colspan="3">
@@ -1238,98 +1386,195 @@
                 // Reset results
                 initialState.style.display = 'block';
                 resultsState.style.display = 'none';
+                accuracyValue.textContent = '0%';
+                confidenceScore.textContent = '0%';
+                processingTime.textContent = '0s';
+                reviewPage = 1;
+                reviewLastPage = 1;
+                updateReviewPagination();
                 
                 showToast('File berhasil dihapus', 'info');
             }
             
             function importFile() {
                 if (!currentFile) return;
-                
-                // Show progress
                 progressContainer.classList.add('active');
                 importBtn.disabled = true;
                 importBtn.innerHTML = '<div class="spinner"></div> Mengimpor...';
-                
-                // Simulate import process
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += Math.random() * 20;
-                    if (progress > 95) progress = 95;
-                    
-                    progressFill.style.width = `${progress}%`;
-                    progressText.textContent = `${Math.round(progress)}%`;
-                }, 300);
-                
-                // Simulate completion
-                setTimeout(() => {
-                    clearInterval(interval);
-                    progressFill.style.width = '100%';
-                    progressText.textContent = '100%';
-                    
-                    setTimeout(() => {
-                        // Reset progress
+                progressFill.style.width = '30%';
+                progressText.textContent = '30%';
+
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const formData = new FormData();
+                formData.append('file', currentFile);
+
+                fetch('/analisis/import', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: formData
+                })
+                    .then(async (response) => {
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.message || 'Gagal mengimpor data.');
+                        }
+                        return response.json();
+                    })
+                    .then((data) => {
+                        currentAnalysisId = data.analysis_id;
+                        totalReviews.textContent = `${data.total_reviews} review`;
+                        progressFill.style.width = '100%';
+                        progressText.textContent = '100%';
+
+                        // Update preview table from server
+                        updateTableFromReviews(data.preview || [], 'Belum dianalisis');
+                        reviewPage = 1;
+                        reviewLastPage = 1;
+                        updateReviewPagination();
+                        loadHistory();
+
+                        setTimeout(() => {
+                            progressContainer.classList.remove('active');
+                            progressFill.style.width = '0%';
+                            progressText.textContent = '0%';
+
+                            importBtn.style.display = 'none';
+                            analyzeBtn.disabled = false;
+                            fileInfo.classList.add('imported');
+                            showToast(data.message || 'Data berhasil diimport ke database', 'success');
+                        }, 400);
+                    })
+                    .catch((error) => {
+                        importBtn.disabled = false;
+                        importBtn.innerHTML = '<i class="fas fa-file-import"></i> Import ke Database';
                         progressContainer.classList.remove('active');
                         progressFill.style.width = '0%';
                         progressText.textContent = '0%';
-                        
-                        // Update UI
-                        importBtn.style.display = 'none';
-                        analyzeBtn.disabled = false;
-                        
-                        // Update file info style
-                        fileInfo.classList.add('imported');
-                        
-                        showToast('Data berhasil diimport ke database', 'success');
-                    }, 500);
-                }, 2000);
+                        showToast(error.message, 'error');
+                    });
             }
             
             function analyzeData() {
+                if (!currentAnalysisId) {
+                    showToast('Silakan import data terlebih dahulu.', 'error');
+                    return;
+                }
+
                 analyzeBtn.disabled = true;
                 analyzeBtn.innerHTML = '<div class="spinner"></div> Menganalisis...';
-                
-                // Generate sample results with neutral sentiment
-                const positive = Math.floor(Math.random() * 120) + 30;
-                const negative = Math.floor(Math.random() * 80) + 15;
-                const neutral = Math.floor(Math.random() * 60) + 10;
-                const total = positive + negative + neutral;
-                const positivePct = Math.round((positive / total) * 100);
-                const negativePct = Math.round((negative / total) * 100);
-                const neutralPct = Math.round((neutral / total) * 100);
-                const accuracy = Math.floor(Math.random() * 15) + 85;
-                const confidence = Math.floor(Math.random() * 10) + 90;
-                const processTime = (Math.random() * 1.5 + 0.5).toFixed(1);
-                
-                setTimeout(() => {
-                    // Update results
-                    positiveCount.textContent = positive;
-                    negativeCount.textContent = negative;
-                    neutralCount.textContent = neutral;
-                    positivePercent.textContent = `${positivePct}% dari total`;
-                    negativePercent.textContent = `${negativePct}% dari total`;
-                    neutralPercent.textContent = `${neutralPct}% dari total`;
-                    accuracyValue.textContent = `${accuracy}%`;
-                    totalCount.textContent = total;
-                    confidenceScore.textContent = `${confidence}%`;
-                    processingTime.textContent = `${processTime}s`;
-                    totalReviews.textContent = `${total} review`;
-                    
-                    // Show results
-                    initialState.style.display = 'none';
-                    resultsState.style.display = 'block';
-                    
-                    // Update chart
-                    updateChart(positive, negative, neutral);
-                    
-                    // Update table with sample data including neutral
-                    updateTable(total, positive, negative, neutral);
-                    
-                    // Reset button
-                    analyzeBtn.disabled = false;
-                    analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Analisis Ulang';
-                    
-                    showToast(`Analisis selesai! ${positive} positif, ${negative} negatif, ${neutral} netral`, 'success');
-                }, 1500);
+
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                fetch(`/analisis/${currentAnalysisId}/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(async (response) => {
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.message || 'Gagal melakukan analisis.');
+                        }
+                        return response.json();
+                    })
+                    .then((data) => {
+                        const positive = data.positive || 0;
+                        const negative = data.negative || 0;
+                        const neutral = data.neutral || 0;
+                        const total = data.total || (positive + negative + neutral);
+
+                        const positivePct = total ? Math.round((positive / total) * 100) : 0;
+                        const negativePct = total ? Math.round((negative / total) * 100) : 0;
+                        const neutralPct = total ? Math.round((neutral / total) * 100) : 0;
+
+                        positiveCount.textContent = positive;
+                        negativeCount.textContent = negative;
+                        neutralCount.textContent = neutral;
+                        positivePercent.textContent = `${positivePct}% dari total`;
+                        negativePercent.textContent = `${negativePct}% dari total`;
+                        neutralPercent.textContent = `${neutralPct}% dari total`;
+                        accuracyValue.textContent = data.model_accuracy
+                            ? `${Math.round(data.model_accuracy * 100)}%`
+                            : '0%';
+                        totalCount.textContent = total;
+                        confidenceScore.textContent = data.average_confidence
+                            ? `${Math.round(data.average_confidence * 100)}%`
+                            : '0%';
+                        processingTime.textContent = data.processing_time
+                            ? `${data.processing_time.toFixed(1)}s`
+                            : '0s';
+                        totalReviews.textContent = `${total} review`;
+
+                        initialState.style.display = 'none';
+                        resultsState.style.display = 'block';
+
+                        updateChart(positive, negative, neutral);
+                        loadReviewsPage(currentAnalysisId, 1);
+                        loadHistory();
+
+                        analyzeBtn.disabled = false;
+                        analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Analisis Ulang';
+
+                        showToast(`Analisis selesai! ${positive} positif, ${negative} negatif, ${neutral} netral`, 'success');
+                    })
+                    .catch((error) => {
+                        analyzeBtn.disabled = false;
+                        analyzeBtn.innerHTML = '<i class="fas fa-play"></i> Analisis Sekarang';
+                        showToast(error.message, 'error');
+                    });
+            }
+
+            function loadSummary(analysisId) {
+                fetch(`/analisis/${analysisId}/summary`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(async (response) => {
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.message || 'Gagal memuat ringkasan.');
+                        }
+                        return response.json();
+                    })
+                    .then((data) => {
+                        currentAnalysisId = analysisId;
+                        const positive = data.positive || 0;
+                        const negative = data.negative || 0;
+                        const neutral = data.neutral || 0;
+                        const total = data.total || (positive + negative + neutral);
+
+                        const positivePct = total ? Math.round((positive / total) * 100) : 0;
+                        const negativePct = total ? Math.round((negative / total) * 100) : 0;
+                        const neutralPct = total ? Math.round((neutral / total) * 100) : 0;
+
+                        positiveCount.textContent = positive;
+                        negativeCount.textContent = negative;
+                        neutralCount.textContent = neutral;
+                        positivePercent.textContent = `${positivePct}% dari total`;
+                        negativePercent.textContent = `${negativePct}% dari total`;
+                        neutralPercent.textContent = `${neutralPct}% dari total`;
+                        accuracyValue.textContent = '0%';
+                        totalCount.textContent = total;
+                        confidenceScore.textContent = data.average_confidence
+                            ? `${Math.round(data.average_confidence * 100)}%`
+                            : '0%';
+                        processingTime.textContent = '0s';
+                        totalReviews.textContent = `${total} review`;
+
+                        initialState.style.display = 'none';
+                        resultsState.style.display = 'block';
+                        updateChart(positive, negative, neutral);
+
+                        loadReviewsPage(analysisId, 1);
+                    })
+                    .catch((error) => {
+                        showToast(error.message, 'error');
+                    });
             }
             
             function previewFile(file) {
@@ -1405,70 +1650,44 @@
                 reader.readAsText(file);
             }
             
-            function updateTable(total, positive, negative, neutral) {
-                // Create sample reviews with all three sentiments
-                const sampleReviews = [
-                    { text: "Aplikasi sangat membantu dalam pekerjaan sehari-hari", sentiment: "positive" },
-                    { text: "UI/UX yang menarik dan mudah digunakan", sentiment: "positive" },
-                    { text: "Sering error ketika membuka file besar", sentiment: "negative" },
-                    { text: "Update terbaru membuat aplikasi lebih lambat", sentiment: "negative" },
-                    { text: "Aplikasi ini tersedia di Play Store dan App Store", sentiment: "neutral" },
-                    { text: "Fitur lengkap dan customer service responsif", sentiment: "positive" },
-                    { text: "Membutuhkan koneksi internet yang stabil", sentiment: "neutral" },
-                    { text: "Konsumsi baterai terlalu tinggi", sentiment: "negative" },
-                    { text: "Tersedia dalam beberapa bahasa", sentiment: "neutral" },
-                    { text: "Proses login yang cepat dan aman", sentiment: "positive" }
-                ];
-                
-                // Calculate distribution for preview
-                const totalSample = Math.min(8, total);
-                let tableHTML = '';
-                
-                // Show proportional representation
-                let positiveShown = 0, negativeShown = 0, neutralShown = 0;
-                const positiveTarget = Math.round((positive / total) * totalSample);
-                const negativeTarget = Math.round((negative / total) * totalSample);
-                const neutralTarget = totalSample - positiveTarget - negativeTarget;
-                
-                for (let i = 0; i < sampleReviews.length && (positiveShown + negativeShown + neutralShown) < totalSample; i++) {
-                    const review = sampleReviews[i];
-                    
-                    // Check if we need more of this sentiment
-                    if (review.sentiment === 'positive' && positiveShown < positiveTarget) {
-                        tableHTML += createTableRow(positiveShown + negativeShown + neutralShown + 1, review.text, review.sentiment);
-                        positiveShown++;
-                    } else if (review.sentiment === 'negative' && negativeShown < negativeTarget) {
-                        tableHTML += createTableRow(positiveShown + negativeShown + neutralShown + 1, review.text, review.sentiment);
-                        negativeShown++;
-                    } else if (review.sentiment === 'neutral' && neutralShown < neutralTarget) {
-                        tableHTML += createTableRow(positiveShown + negativeShown + neutralShown + 1, review.text, review.sentiment);
-                        neutralShown++;
-                    }
-                }
-                
-                if (total > totalSample) {
-                    tableHTML += `
+            function updateTableFromReviews(reviews, emptyLabel = 'Belum dianalisis') {
+                if (!reviews.length) {
+                    reviewTable.innerHTML = `
                         <tr>
-                            <td colspan="3" class="text-center text-muted py-3">
-                                <i class="fas fa-ellipsis-h me-1"></i>
-                                Dan ${total - totalSample} review lainnya
+                            <td colspan="3">
+                                <div class="empty-state">
+                                    <i class="fas fa-file-import"></i>
+                                    <h4 class="mt-3 mb-2">Belum ada data</h4>
+                                    <p class="mb-0">Unggah file CSV untuk memulai analisis</p>
+                                </div>
                             </td>
                         </tr>
                     `;
+                    return;
                 }
-                
+
+                let tableHTML = '';
+                reviews.forEach((review, idx) => {
+                    const sentiment = review.sentiment ?? null;
+                    const text = review.review_content || review.text || '';
+                    tableHTML += createTableRow(idx + 1, text, sentiment, emptyLabel);
+                });
+
                 reviewTable.innerHTML = tableHTML;
             }
-            
-            function createTableRow(index, text, sentiment) {
-                const sentimentText = sentiment === 'positive' ? 'Positif' : 
-                                     sentiment === 'negative' ? 'Negatif' : 'Netral';
+
+            function createTableRow(index, text, sentiment, emptyLabel = 'Belum dianalisis') {
+                let sentimentText = emptyLabel;
+                if (sentiment === 'positive') sentimentText = 'Positif';
+                if (sentiment === 'negative') sentimentText = 'Negatif';
+                if (sentiment === 'neutral') sentimentText = 'Netral';
+                const sentimentClass = sentiment || 'neutral';
                 
                 return `
                     <tr>
                         <td>${index}</td>
-                        <td>${text}</td>
-                        <td><span class="sentiment-badge ${sentiment}">${sentimentText}</span></td>
+                        <td>${text.length > 120 ? text.substring(0, 120) + '...' : text}</td>
+                        <td><span class="sentiment-badge ${sentimentClass}">${sentimentText}</span></td>
                     </tr>
                 `;
             }
@@ -1529,6 +1748,117 @@
                     }
                 });
             }
+
+            function updateReviewPagination() {
+                reviewPageInfo.textContent = `Halaman ${reviewPage}`;
+                reviewPrev.disabled = reviewPage <= 1;
+                reviewNext.disabled = reviewPage >= reviewLastPage;
+            }
+
+            function loadReviewsPage(analysisId, page = 1) {
+                fetch(`/analisis/${analysisId}/reviews?page=${page}`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(async (response) => {
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.message || 'Gagal memuat data ulasan.');
+                        }
+                        return response.json();
+                    })
+                    .then((data) => {
+                        reviewPage = data.current_page || page;
+                        reviewLastPage = data.last_page || 1;
+                        totalReviews.textContent = `${data.total || 0} review`;
+                        updateTableFromReviews(data.data || []);
+                        updateReviewPagination();
+                    })
+                    .catch((error) => {
+                        showToast(error.message, 'error');
+                    });
+            }
+
+            function loadHistory(page = 1) {
+                fetch(`/analisis/history?page=${page}`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(async (response) => {
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new Error(errorData.message || 'Gagal memuat riwayat.');
+                        }
+                        return response.json();
+                    })
+                    .then((data) => {
+                        historyPage = data.current_page || page;
+                        historyLastPage = data.last_page || 1;
+                        historyPageInfo.textContent = `Halaman ${historyPage}`;
+                        historyPrev.disabled = historyPage <= 1;
+                        historyNext.disabled = historyPage >= historyLastPage;
+
+                        if (!data.data || !data.data.length) {
+                            historyTable.innerHTML = `
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="empty-state">
+                                            <i class="fas fa-history"></i>
+                                            <h4 class="mt-3 mb-2">Belum ada riwayat</h4>
+                                            <p class="mb-0">Import data untuk memulai analisis</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                            return;
+                        }
+
+                        let tableHTML = '';
+                        data.data.forEach((item) => {
+                            const total = (item.total_review_positif || 0)
+                                + (item.total_review_negatif || 0)
+                                + (item.total_review_netral || 0);
+                            const isAnalyzed = item.total_review_positif !== null
+                                && item.total_review_negatif !== null
+                                && item.total_review_netral !== null;
+                            tableHTML += `
+                                <tr>
+                                    <td>${item.nama_analisis}</td>
+                                    <td>${item.tanggal_analisis}</td>
+                                    <td>${total || '-'}</td>
+                                    <td>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <button class="btn btn-outline btn-sm" data-action="view" data-id="${item.id}">
+                                                <i class="fas fa-eye"></i> Lihat
+                                            </button>
+                                            <button class="btn btn-success btn-sm" data-action="analyze" data-id="${item.id}">
+                                                <i class="fas fa-play"></i> Analisis
+                                            </button>
+                                            <a class="btn btn-outline btn-sm ${isAnalyzed ? '' : 'disabled'}"
+                                                ${isAnalyzed ? '' : 'aria-disabled="true" data-action="export-disabled" data-message="Analisis belum dijalankan. Jalankan analisis terlebih dahulu." data-bs-toggle="tooltip" data-bs-placement="top" title="Analisis belum dijalankan"'}
+                                                href="${isAnalyzed ? `/analisis/${item.id}/export/csv` : '#'}">
+                                                <i class="fas fa-file-csv"></i> CSV
+                                            </a>
+                                            <a class="btn btn-outline btn-sm ${isAnalyzed ? '' : 'disabled'}"
+                                                ${isAnalyzed ? '' : 'aria-disabled="true" data-action="export-disabled" data-message="Analisis belum dijalankan. Jalankan analisis terlebih dahulu." data-bs-toggle="tooltip" data-bs-placement="top" title="Analisis belum dijalankan"'}
+                                                href="${isAnalyzed ? `/analisis/${item.id}/export/excel` : '#'}">
+                                                <i class="fas fa-file-excel"></i> Excel
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+
+                        historyTable.innerHTML = tableHTML;
+                        initTooltips();
+                    })
+                    .catch((error) => {
+                        showToast(error.message, 'error');
+                    });
+            }
             
             function formatFileSize(bytes) {
                 if (bytes === 0) return '0 Bytes';
@@ -1569,6 +1899,15 @@
                     }
                 }, 5000);
             }
+
+            loadHistory();
+
+            function initTooltips() {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.forEach((tooltipTriggerEl) => {
+                    new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
             
             // Initialize chart with three categories
             const ctx = document.getElementById('sentimentChart').getContext('2d');
@@ -1602,6 +1941,8 @@
                     cutout: '65%'
                 }
             });
+
+            initTooltips();
         });
     </script>
 </body>
