@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 import warnings
 from contextlib import contextmanager
@@ -7,7 +6,8 @@ from pathlib import Path
 from typing import Optional
 
 
-DEFAULT_OSS_DIR = r"D:\oss-analisis"
+BASE_DIR = Path(__file__).resolve().parent
+OSS_DIR = BASE_DIR / "oss-analisis"
 
 
 @contextmanager
@@ -36,9 +36,23 @@ def load_accuracy(oss_dir: Path) -> Optional[float]:
 
 
 def main() -> int:
-    oss_dir = Path(os.environ.get("OSS_ANALYSIS_DIR", DEFAULT_OSS_DIR))
+    oss_dir = OSS_DIR
     if not oss_dir.exists():
-        sys.stderr.write("OSS_ANALYSIS_DIR tidak ditemukan.\n")
+        sys.stderr.write("Folder model tidak ditemukan di scripts/oss-analisis.\n")
+        return 1
+
+    required_files = [
+        oss_dir / "config.py",
+        oss_dir / "src" / "predict.py",
+        oss_dir / "src" / "preprocess.py",
+        oss_dir / "src" / "naive_bayes.py",
+        oss_dir / "models" / "naive_bayes_model.pkl",
+        oss_dir / "models" / "vectorizer.pkl",
+        oss_dir / "models" / "label_encoder.pkl",
+    ]
+    missing = [str(path) for path in required_files if not path.exists()]
+    if missing:
+        sys.stderr.write("File model tidak lengkap:\n" + "\n".join(missing) + "\n")
         return 1
 
     sys.path.insert(0, str(oss_dir))

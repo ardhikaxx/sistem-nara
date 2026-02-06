@@ -883,6 +883,10 @@
                                         <i class="fas fa-chart-pie"></i>
                                         Analisis Sekarang
                                     </button>
+                                    <button class="btn btn-outline" id="repairModelBtn" style="display: none;">
+                                        <i class="fas fa-wrench"></i>
+                                        Perbaiki Model
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1196,6 +1200,7 @@
             const removeFileBtn = document.getElementById('removeFile');
             const importBtn = document.getElementById('importBtn');
             const analyzeBtn = document.getElementById('analyzeBtn');
+            const repairModelBtn = document.getElementById('repairModelBtn');
             const progressContainer = document.getElementById('progressContainer');
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
@@ -1237,6 +1242,7 @@
             removeFileBtn.addEventListener('click', removeFile);
             importBtn.addEventListener('click', importFile);
             analyzeBtn.addEventListener('click', analyzeData);
+            repairModelBtn.addEventListener('click', repairModel);
             reviewPrev.addEventListener('click', () => {
                 if (currentAnalysisId && reviewPage > 1) {
                     loadReviewsPage(currentAnalysisId, reviewPage - 1);
@@ -1462,12 +1468,110 @@
                     return;
                 }
 
-                analyzeBtn.disabled = true;
-                analyzeBtn.innerHTML = '<div class="spinner"></div> Menganalisis...';
+                checkModelStatus().then((status) => {
+                    if (!status.ok) {
+                        const details = status.missing && status.missing.length
+                            ? `\nFile hilang:\n- ${status.missing.join('\n- ')}`
+                            : '';
+                        showToast(`Model belum siap. Klik "Perbaiki Model".${details}`, 'error');
+                        return;
+                    }
 
+                    analyzeBtn.disabled = true;
+                    analyzeBtn.innerHTML = '<div class="spinner"></div> Menganalisis...';
+
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                    fetch(`/analisis/${currentAnalysisId}/analyze`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                        .then(async (response) => {
+                            if (!response.ok) {
+                                const errorData = await response.json().catch(() => ({}));
+                                throw new Error(errorData.message || 'Gagal melakukan analisis.');
+                            }
+                            return response.json();
+                        })
+                        .then((data) => {
+                            const positive = data.positive || 0;
+                            const negative = data.negative || 0;
+                            const neutral = data.neutral || 0;
+                            const total = data.total || (positive + negative + neutral);
+
+                            const positivePct = total ? Math.round((positive / total) * 100) : 0;
+                            const negativePct = total ? Math.round((negative / total) * 100) : 0;
+                            const neutralPct = total ? Math.round((neutral / total) * 100) : 0;
+
+                            positiveCount.textContent = positive;
+                            negativeCount.textContent = negative;
+                            neutralCount.textContent = neutral;
+                            positivePercent.textContent = `${positivePct}% dari total`;
+                            negativePercent.textContent = `${negativePct}% dari total`;
+                            neutralPercent.textContent = `${neutralPct}% dari total`;
+                            accuracyValue.textContent = data.model_accuracy
+                                ? `${Math.round(data.model_accuracy * 100)}%`
+                                : '0%';
+                            totalCount.textContent = total;
+                            confidenceScore.textContent = data.average_confidence
+                                ? `${Math.round(data.average_confidence * 100)}%`
+                                : '0%';
+                            processingTime.textContent = data.processing_time
+                                ? `${data.processing_time.toFixed(1)}s`
+                                : '0s';
+                            totalReviews.textContent = `${total} review`;
+
+                            initialState.style.display = 'none';
+                            resultsState.style.display = 'block';
+
+                            updateChart(positive, negative, neutral);
+                            loadReviewsPage(currentAnalysisId, 1);
+                            loadHistory();
+
+                            analyzeBtn.disabled = false;
+                            analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Analisis Ulang';
+
+                            showToast(`Analisis selesai! ${positive} positif, ${negative} negatif, ${neutral} netral`, 'success');
+                        })
+                        .catch((error) => {
+                            analyzeBtn.disabled = false;
+                            analyzeBtn.innerHTML = '<i class="fas fa-play"></i> Analisis Sekarang';
+                            showToast(error.message, 'error');
+                        });
+                });
+            }
+
+            function checkModelStatus() {
+                return fetch('/analisis/model/status', {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.ok) {
+                            repairModelBtn.style.display = 'none';
+                            return { ok: true };
+                        }
+
+                        repairModelBtn.style.display = 'inline-flex';
+                        return { ok: false, missing: data.missing || [] };
+                    })
+                    .catch(() => {
+                        repairModelBtn.style.display = 'inline-flex';
+                        return { ok: false };
+                    });
+            }
+
+            function repairModel() {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                repairModelBtn.disabled = true;
+                repairModelBtn.innerHTML = '<div class="spinner"></div> Memperbaiki...';
 
-                fetch(`/analisis/${currentAnalysisId}/analyze`, {
+                fetch('/analisis/model/repair', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -1477,53 +1581,21 @@
                     .then(async (response) => {
                         if (!response.ok) {
                             const errorData = await response.json().catch(() => ({}));
-                            throw new Error(errorData.message || 'Gagal melakukan analisis.');
+                            throw new Error(errorData.message || 'Gagal memperbaiki model.');
                         }
                         return response.json();
                     })
                     .then((data) => {
-                        const positive = data.positive || 0;
-                        const negative = data.negative || 0;
-                        const neutral = data.neutral || 0;
-                        const total = data.total || (positive + negative + neutral);
-
-                        const positivePct = total ? Math.round((positive / total) * 100) : 0;
-                        const negativePct = total ? Math.round((negative / total) * 100) : 0;
-                        const neutralPct = total ? Math.round((neutral / total) * 100) : 0;
-
-                        positiveCount.textContent = positive;
-                        negativeCount.textContent = negative;
-                        neutralCount.textContent = neutral;
-                        positivePercent.textContent = `${positivePct}% dari total`;
-                        negativePercent.textContent = `${negativePct}% dari total`;
-                        neutralPercent.textContent = `${neutralPct}% dari total`;
-                        accuracyValue.textContent = data.model_accuracy
-                            ? `${Math.round(data.model_accuracy * 100)}%`
-                            : '0%';
-                        totalCount.textContent = total;
-                        confidenceScore.textContent = data.average_confidence
-                            ? `${Math.round(data.average_confidence * 100)}%`
-                            : '0%';
-                        processingTime.textContent = data.processing_time
-                            ? `${data.processing_time.toFixed(1)}s`
-                            : '0s';
-                        totalReviews.textContent = `${total} review`;
-
-                        initialState.style.display = 'none';
-                        resultsState.style.display = 'block';
-
-                        updateChart(positive, negative, neutral);
-                        loadReviewsPage(currentAnalysisId, 1);
-                        loadHistory();
-
+                        showToast(data.message || 'Model berhasil diperbaiki.', 'success');
+                        repairModelBtn.style.display = 'none';
+                        repairModelBtn.disabled = false;
+                        repairModelBtn.innerHTML = '<i class="fas fa-wrench"></i> Perbaiki Model';
                         analyzeBtn.disabled = false;
-                        analyzeBtn.innerHTML = '<i class="fas fa-redo"></i> Analisis Ulang';
-
-                        showToast(`Analisis selesai! ${positive} positif, ${negative} negatif, ${neutral} netral`, 'success');
+                        checkModelStatus();
                     })
                     .catch((error) => {
-                        analyzeBtn.disabled = false;
-                        analyzeBtn.innerHTML = '<i class="fas fa-play"></i> Analisis Sekarang';
+                        repairModelBtn.disabled = false;
+                        repairModelBtn.innerHTML = '<i class="fas fa-wrench"></i> Perbaiki Model';
                         showToast(error.message, 'error');
                     });
             }
@@ -1901,6 +1973,7 @@
             }
 
             loadHistory();
+            checkModelStatus();
 
             function initTooltips() {
                 const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

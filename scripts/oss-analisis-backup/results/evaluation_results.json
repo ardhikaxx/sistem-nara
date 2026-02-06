@@ -1,0 +1,77 @@
+{
+  "evaluation_date": "2026-02-05 19:53:22",
+  "test_samples": 460,
+  "metrics": {
+    "accuracy": 0.8369565217391305,
+    "precision": 0.8049405506145462,
+    "recall": 0.8369565217391305,
+    "f1_score": 0.8182651850253533
+  },
+  "confusion_matrix": [
+    [
+      213,
+      0,
+      18
+    ],
+    [
+      16,
+      0,
+      4
+    ],
+    [
+      37,
+      0,
+      172
+    ]
+  ],
+  "class_labels": [
+    "negative",
+    "neutral",
+    "positive"
+  ],
+  "per_class_metrics": {
+    "negative": {
+      "precision": 0.8007518796992481,
+      "recall": 0.922077922077922,
+      "f1-score": 0.8571428571428571,
+      "support": 231.0
+    },
+    "neutral": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 20.0
+    },
+    "positive": {
+      "precision": 0.8865979381443299,
+      "recall": 0.8229665071770335,
+      "f1-score": 0.8535980148883374,
+      "support": 209.0
+    },
+    "accuracy": 0.8369565217391305,
+    "macro avg": {
+      "precision": 0.5624499392811927,
+      "recall": 0.5816814764183186,
+      "f1-score": 0.5702469573437315,
+      "support": 460.0
+    },
+    "weighted avg": {
+      "precision": 0.8049405506145462,
+      "recall": 0.8369565217391305,
+      "f1-score": 0.8182651850253533,
+      "support": 460.0
+    }
+  },
+  "visualizations_created": [
+    "confusion_matrix.png",
+    "classification_report.png",
+    "metrics_comparison.png",
+    "roc_curve.png",
+    "feature_importance.png",
+    "wordclouds.png",
+    "correlation_matrix.png",
+    "confusion_matrix_interactive.html",
+    "confusion_matrix_interactive.png",
+    "dashboard_summary.png"
+  ]
+}

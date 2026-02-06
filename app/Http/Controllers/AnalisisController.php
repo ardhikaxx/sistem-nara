@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 use Illuminate\Support\Facades\Response;
@@ -141,6 +142,17 @@ class AnalisisController extends Controller
     {
         $start = microtime(true);
 
+        $missing = $this->missingModelFiles();
+        if ($missing) {
+            Log::warning('Model analisis tidak lengkap', [
+                'missing' => $missing,
+            ]);
+            return response()->json([
+                'message' => 'File model tidak lengkap. Silakan perbaiki model terlebih dahulu.',
+                'missing' => $missing,
+            ], 422);
+        }
+
         $reviews = DataUlasan::where('analisis_id', $analisis->id)
             ->select('id', 'review_content')
             ->get();
@@ -165,9 +177,16 @@ class AnalisisController extends Controller
         $process->run();
 
         if (!$process->isSuccessful()) {
+            $errorOutput = trim($process->getErrorOutput());
+            Log::error('Analisis gagal dijalankan', [
+                'analysis_id' => $analisis->id,
+                'analysis_name' => $analisis->nama_analisis,
+                'error_output' => $errorOutput,
+                'output' => $process->getOutput(),
+            ]);
             return response()->json([
-                'message' => 'Gagal menjalankan analisis.',
-                'error' => $process->getErrorOutput(),
+                'message' => $errorOutput !== '' ? $errorOutput : 'Gagal menjalankan analisis.',
+                'error' => $errorOutput,
             ], 500);
         }
 
@@ -175,6 +194,11 @@ class AnalisisController extends Controller
         $data = json_decode($output, true);
 
         if (!is_array($data) || !isset($data['results'])) {
+            Log::error('Output analisis tidak valid', [
+                'analysis_id' => $analisis->id,
+                'analysis_name' => $analisis->nama_analisis,
+                'output' => $output,
+            ]);
             return response()->json([
                 'message' => 'Output analisis tidak valid.',
                 'output' => $output,
@@ -219,6 +243,17 @@ class AnalisisController extends Controller
             ->select('review_content', 'sentiment')
             ->limit(10)
             ->get();
+
+        Log::info('Analisis selesai', [
+            'analysis_id' => $analisis->id,
+            'analysis_name' => $analisis->nama_analisis,
+            'total' => $total,
+            'positive' => $positive,
+            'negative' => $negative,
+            'neutral' => $neutral,
+            'average_confidence' => $averageConfidence,
+            'processing_time' => $processingTime,
+        ]);
 
         return response()->json([
             'analysis_id' => $analisis->id,
@@ -369,6 +404,43 @@ class AnalisisController extends Controller
         return $excelClass::download(new AnalisisUlasanExport($analisis->id), $filename);
     }
 
+    public function modelStatus(): JsonResponse
+    {
+        $missing = $this->missingModelFiles();
+
+        return response()->json([
+            'ok' => empty($missing),
+            'missing' => $missing,
+        ]);
+    }
+
+    public function repairModel(): JsonResponse
+    {
+        $backupDir = base_path('scripts/oss-analisis-backup');
+        $targetDir = base_path('scripts/oss-analisis');
+
+        if (!File::exists($backupDir)) {
+            return response()->json([
+                'message' => 'Backup model tidak ditemukan.',
+            ], 404);
+        }
+
+        File::ensureDirectoryExists($targetDir);
+        File::copyDirectory($backupDir, $targetDir);
+
+        $missing = $this->missingModelFiles();
+        if ($missing) {
+            return response()->json([
+                'message' => 'Perbaikan model belum lengkap.',
+                'missing' => $missing,
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Model berhasil diperbaiki.',
+        ]);
+    }
+
     private function generateAnalysisName(): string
     {
         $last = Analisis::orderByDesc('id')->first();
@@ -413,5 +485,28 @@ class AnalisisController extends Controller
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    private function missingModelFiles(): array
+    {
+        $base = base_path('scripts/oss-analisis');
+        $files = [
+            $base . DIRECTORY_SEPARATOR . 'config.py',
+            $base . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'predict.py',
+            $base . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'preprocess.py',
+            $base . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'naive_bayes.py',
+            $base . DIRECTORY_SEPARATOR . 'models' . DIRECTORY_SEPARATOR . 'naive_bayes_model.pkl',
+            $base . DIRECTORY_SEPARATOR . 'models' . DIRECTORY_SEPARATOR . 'vectorizer.pkl',
+            $base . DIRECTORY_SEPARATOR . 'models' . DIRECTORY_SEPARATOR . 'label_encoder.pkl',
+        ];
+
+        $missing = [];
+        foreach ($files as $file) {
+            if (!File::exists($file)) {
+                $missing[] = str_replace(base_path() . DIRECTORY_SEPARATOR, '', $file);
+            }
+        }
+
+        return $missing;
     }
 }

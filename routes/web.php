@@ -11,3 +11,5 @@ Route::get('/analisis/{analisis}/summary', [AnalisisController::class, 'summary'
 Route::get('/analisis/{analisis}/reviews', [AnalisisController::class, 'reviews'])->name('analisis.reviews');
 Route::get('/analisis/{analisis}/export/csv', [AnalisisController::class, 'exportCsv'])->name('analisis.export.csv');
 Route::get('/analisis/{analisis}/export/excel', [AnalisisController::class, 'exportExcel'])->name('analisis.export.excel');
+Route::get('/analisis/model/status', [AnalisisController::class, 'modelStatus'])->name('analisis.model.status');
+Route::post('/analisis/model/repair', [AnalisisController::class, 'repairModel'])->name('analisis.model.repair');
